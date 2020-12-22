@@ -11,7 +11,8 @@ source ~/.bashrc
 # Now switch to Root
 #sudo -i
 # install base packages
-sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils smbclient
+sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
+   smbclient apt-transport-https ca-certificates curl software-properties-common
 
 if [ "$virt" = "microsoft" ]
 then
@@ -50,10 +51,10 @@ sudo sh -c "echo 'ssl_public_key = /etc/landscape/landscape_server_ca.crt' >> /e
 #sudo sh -c "echo '00 5    * * 5   root  /mnt/common/scripts/autoremove-apps.sh' >> /etc/crontab"
 echo "Populating CRON"
 sudo cp /mnt/linux/setup/cron/* /etc/cron.d
-chmod 644 /etc/cron.d/*
+sudo chmod 644 /etc/cron.d/*
 # let's randomize the backup time and update the cron job
-hour=$((1 + RANDOM % 6))
-minute=$((RANDOM % 59))
+hour=$((1 + $RANDOM % 6))
+minute=$((1 + $RANDOM % 59))
 sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.sh' >> /etc/cron.d/system-backup"
 #
 # Update logrotate
@@ -70,7 +71,7 @@ then
     sudo update-initramfs -u
 fi
 # install and configure the mail server
-source /mnt/linux/setup-postfix
+source /mnt/linux/scripts/setup-postfix
 echo "Done!"
 read -n 1 -s -r -p "Press any key to continue"
 sudo reboot
