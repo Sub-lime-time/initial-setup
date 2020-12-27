@@ -11,6 +11,8 @@ source ~/.bashrc
 # Now switch to Root
 #sudo -i
 # install base packages
+sudo apt update
+sudo apt dist-upgrade -y
 sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
    smbclient apt-transport-https ca-certificates curl software-properties-common
 
@@ -31,7 +33,14 @@ sudo sh -c "echo 'linux -fstype=nfs,rw,soft,intr hal.lh.sburvt.com:/mnt/user/lin
 #sudo mkdir -p /mnt/backup
 #sudo mkdir -p /mnt/linux
 sudo systemctl restart autofs
-
+#
+# check to make sure that the linux share exists
+#
+FILE = /mnt/linux/scripts/postfix
+if [ ! -f "$FILE" ]; then
+   echo "NFS File share not available!"
+   exit 1 # if it doesn't then stop
+fi
 # set TimeZone
 sudo timedatectl set-timezone America/New_York
 echo "Prep Landscape"
