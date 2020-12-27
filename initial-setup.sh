@@ -36,7 +36,8 @@ sudo systemctl restart autofs
 #
 # check to make sure that the linux share exists
 #
-FILE = /mnt/linux/scripts/postfix
+sleep 5s
+FILE=/mnt/linux/scripts/postfix
 if [ ! -f "$FILE" ]; then
    echo "NFS File share not available!"
    exit 1 # if it doesn't then stop
