@@ -27,17 +27,16 @@ echo "Setting up AUTOFS"
 sudo sh -c "echo '' >> /etc/auto.master"
 sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
 sudo sh -c "echo '' >> /etc/auto.nfs"
-sudo sh -c "echo '# NFS4 Mounts' >> /etc/auto.nfs"
+sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
 sudo sh -c "echo 'backup -fstype=nfs,rw,soft,intr hal.lh.sburvt.com:/mnt/user/backup' >> /etc/auto.nfs"
 sudo sh -c "echo 'linux -fstype=nfs,rw,soft,intr hal.lh.sburvt.com:/mnt/user/linux' >> /etc/auto.nfs"
-#sudo mkdir -p /mnt/backup
-#sudo mkdir -p /mnt/linux
+
 sudo systemctl restart autofs
 #
 # check to make sure that the linux share exists
 #
 sleep 5s
-FILE=/mnt/linux/scripts/postfix
+FILE=/mnt/linux/scripts/setup-postfix
 if [ ! -f "$FILE" ]; then
    echo "NFS File share not available!"
    exit 1 # if it doesn't then stop
