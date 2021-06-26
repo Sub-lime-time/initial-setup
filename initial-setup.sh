@@ -28,8 +28,8 @@ sudo sh -c "echo '' >> /etc/auto.master"
 sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
 sudo sh -c "echo '' >> /etc/auto.nfs"
 sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
-sudo sh -c "echo 'backup -fstype=nfs,rw,soft,intr hal.lh.sburvt.com:/mnt/user/backup' >> /etc/auto.nfs"
-sudo sh -c "echo 'linux -fstype=nfs,rw,soft,intr hal.lh.sburvt.com:/mnt/user/linux' >> /etc/auto.nfs"
+sudo sh -c "echo 'backup -fstype=nfs,rw,soft,intr hal.lh.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
+sudo sh -c "echo 'linux -fstype=nfs,rw,soft,intr hal.lh.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
 
 sudo systemctl restart autofs
 #
