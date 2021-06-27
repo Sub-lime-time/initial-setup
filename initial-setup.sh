@@ -1,4 +1,6 @@
 #! /bin/bash
+
+# Revised: 2021/06/27
 # First, detmermine the virtualization technology being used
 # qemu = KVM, hyperv = Microsoft
 virt=$(systemd-detect-virt)
