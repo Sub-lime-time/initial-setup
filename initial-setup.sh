@@ -50,6 +50,7 @@ echo "Prep Landscape"
 sudo mkdir -p /etc/landscape
 sudo cp /mnt/linux/landscape/landscape_server_ca.crt /etc/landscape
 sudo chgrp landscape /etc/landscape/landscape_server_ca.crt
+sudo sh -c "echo '[client]' >> /etc/landscape/client.conf
 sudo sh -c "echo 'ssl_public_key = /etc/landscape/landscape_server_ca.crt' >> /etc/landscape/client.conf"
 #setup System Backup
 #sudo sh -c "echo '#' >> /etc/crontab"
