@@ -5,6 +5,17 @@
 # qemu = KVM, hyperv = Microsoft
 virt=$(systemd-detect-virt)
 
+# Set fqdn hostname
+echo "Setting Hostname..."
+hn=$HOSTNAME
+fqdn=$(nslookup $hn | grep 'Name:'| cut -d$'\t' -f2)
+echo "Original Hostname : "$hn
+echo "FQDN : "$fqdn
+# First update the hostname via cmd
+hostnamectl set-hostname $fqdn
+# Then update the hosts file
+sed -i "s|$hn|$fqdn $hn|g" /etc/hosts
+
 # Update the bashrc to add the NFS Mount directory to the path
 echo "Setting up BASH"
 echo "export PATH=$PATH:/mnt/linux/scripts" >> ~/.bashrc
