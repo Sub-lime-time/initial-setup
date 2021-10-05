@@ -11,11 +11,28 @@ hn=$HOSTNAME
 fqdn=$(nslookup $hn | grep 'Name:'| cut -d$'\t' -f2)
 echo "Original Hostname : "$hn
 echo "FQDN : "$fqdn
-# First update the hostname via cmd
-sudo hostnamectl set-hostname $fqdn
-# Then update the hosts file
-sudo sed -i "s/$hn/$fqdn $hn/g" /etc/hosts
+echo ""
+while true
+do
+        read -r -p "Change Hostname? [Y/n] " input
 
+        case $input in
+            [yY][eE][sS]|[yY])
+                        # First update the hostname via cmd
+                        sudo hostnamectl set-hostname $fqdn
+                        # Then update the hosts file
+                        sudo sed -i "s/$hn/$fqdn $hn/g" /etc/hosts
+                        break
+                        ;;
+            [nN][oO]|[nN])
+                        echo "No"
+                        break
+                        ;;
+            *)
+                echo "Invalid input..."
+                ;;
+        esac
+done
 # Update the bashrc to add the NFS Mount directory to the path
 echo "Setting up BASH"
 echo "export PATH=$PATH:/mnt/linux/scripts" >> ~/.bashrc
