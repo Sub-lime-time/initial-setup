@@ -44,14 +44,8 @@ source ~/.bashrc
 sudo apt update
 sudo apt dist-upgrade -y
 sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
-   smbclient apt-transport-https ca-certificates curl software-properties-common \
-   zsh micro yadm
-   
-echo "Installing Oh My zsh"
-yadm clone https://github.com/Greg2dot0/zshrc.git ~/
+   smbclient apt-transport-https ca-certificates curl software-properties-common
 
-sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-read -r -p "Continue? [Y/n] " input
 if [ "$virt" = "microsoft" ]
 then
    #only install cloud packages if it's hyper-v
