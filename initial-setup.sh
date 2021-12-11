@@ -48,6 +48,8 @@ sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
    zsh micro yadm
    
 echo "Installing Oh My zsh"
+yadm clone https://github.com/Greg2dot0/zshrc.git ~/
+
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 read -r -p "Continue? [Y/n] " input
 if [ "$virt" = "microsoft" ]
