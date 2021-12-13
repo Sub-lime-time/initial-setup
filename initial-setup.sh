@@ -113,6 +113,7 @@ then
 fi
 # install and configure the mail server
 source /mnt/linux/scripts/setup-postfix
+source /mnt/linux/scripts/setup-zsh.sh
 echo "Done!"
 read -n 1 -s -r -p "Press any key to continue"
 sudo reboot
