@@ -7,8 +7,8 @@ virt=$(systemd-detect-virt)
 
 # Set fqdn hostname
 echo "Setting Hostname..."
-hn=$HOSTNAME
-fqdn=$(nslookup $hn | grep 'Name:'| cut -d$'\t' -f2)
+hn=$(hostname)
+fqdn=$(hostname -A |  cut -d ' ' -f1)
 echo "Original Hostname : "$hn
 echo "FQDN : "$fqdn
 echo ""
