@@ -18,10 +18,11 @@ do
 
         case $input in
             [yY][eE][sS]|[yY])
-                        # First update the hostname via cmd
-                        sudo hostnamectl set-hostname $fqdn
-                        # Then update the hosts file
+                        # First update the hosts file
                         sudo sed -i "s/$hn/$fqdn $hn/g" /etc/hosts
+                        # then update the hostname via cmd
+                        sudo hostnamectl set-hostname $fqdn
+ 
                         break
                         ;;
             [nN][oO]|[nN])
