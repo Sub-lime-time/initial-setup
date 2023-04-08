@@ -8,7 +8,8 @@ virt=$(systemd-detect-virt)
 # Set fqdn hostname
 echo "Setting Hostname..."
 hn=$(hostname)
-fqdn=$(hostname -A |  cut -d ' ' -f1)
+fqdn=$(host -TtA $(hostname -s)|grep "has address"|awk '{print $1}') ;
+if [[ "${fqdn}" == "" ]] ; then fqn=$(hostname -s) ; fi ; 
 echo "Original Hostname : "$hn
 echo "FQDN : "$fqdn
 echo ""
