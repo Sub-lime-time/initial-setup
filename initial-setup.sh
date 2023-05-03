@@ -47,7 +47,7 @@ sudo apt update
 sudo apt dist-upgrade -y
 sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
    smbclient apt-transport-https ca-certificates curl software-properties-common \
-   micro pip
+   micro pip net-tools
 
 if [ "$virt" = "microsoft" ]
 then
