@@ -65,6 +65,7 @@ sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.lh.802ski.com:/mnt/user/bac
 sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.lh.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
 
 sudo systemctl restart autofs
+
 #
 # check to make sure that the linux share exists
 #
@@ -77,21 +78,24 @@ fi
 # set TimeZone
 sudo timedatectl set-timezone America/New_York
 echo "Prep Landscape"
+#
+#setup rsyslog
+#
+sudo cp /mnt/linux/setup/rsyslog.d/* /etc/rsyslog.d
+sudo chmod 644 /etc/rsyslog.d/*
+sudo systemctl restart rsyslog
+#
 # prep Landscape Client
+#
 sudo mkdir -p /etc/landscape
 sudo cp /mnt/linux/landscape/landscape_server_ca.crt /etc/landscape
 sudo chgrp landscape /etc/landscape/landscape_server_ca.crt
 sudo sh -c "echo '[client]' >> /etc/landscape/client.conf"
 sudo sh -c "echo 'ssl_public_key = /etc/landscape/landscape_server_ca.crt' >> /etc/landscape/client.conf"
-#setup System Backup
-#sudo sh -c "echo '#' >> /etc/crontab"
-#sudo sh -c "echo '# System Backup' >> /etc/crontab"
-#sudo sh -c "echo '#' >> /etc/crontab"
-#sudo sh -c "echo '45 1    * * 7   root   /mnt/common/scripts/system-backup.sh' >> /etc/crontab"
-#sudo sh -c "echo '#' >> /etc/crontab"
-#sudo sh -c "echo '# Autoremove obsolete packages' >> /etc/crontab"
-#sudo sh -c "echo '#' >> /etc/crontab"
-#sudo sh -c "echo '00 5    * * 5   root  /mnt/common/scripts/autoremove-apps.sh' >> /etc/crontab"
+
+#
+# Setup CRON
+#
 echo "Populating CRON"
 sudo cp /mnt/linux/setup/cron/* /etc/cron.d
 sudo chmod 644 /etc/cron.d/*
