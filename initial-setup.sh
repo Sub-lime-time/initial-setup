@@ -105,7 +105,7 @@ minute=$((1 + $RANDOM % 59))
 sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.sh' >> /etc/cron.d/system-backup"
 #
 # Update logrotate
-sudo chmod 644 /etc/logrotate.d/autoremove
+#sudo chmod 644 /etc/logrotate.d/autoremove
 
 if [ "$virt" = "microsoft" ]
 then
@@ -118,7 +118,7 @@ then
     sudo update-initramfs -u
 fi
 # install and configure the mail server
-source /mnt/linux/scripts/setup-postfix
+source /mnt/linux/scripts/setup-postfix.sh
 source /mnt/linux/scripts/setup-zsh.sh
 echo "Done!"
 read -n 1 -s -r -p "Press any key to continue"
