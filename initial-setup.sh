@@ -22,7 +22,7 @@ do
                         # First update the hosts file
                         sudo sed -i "s/$hn/$fqdn $hn/g" /etc/hosts
                         # then update the hostname via cmd
-                        sudo hostnamectl set-hostname $fqdn
+                        # sudo hostnamectl set-hostname $fqdn
  
                         break
                         ;;
