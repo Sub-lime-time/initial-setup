@@ -104,6 +104,10 @@ hour=$((1 + $RANDOM % 6))
 minute=$((1 + $RANDOM % 59))
 sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.sh' >> /etc/cron.d/system-backup"
 #
+# Setup the system to download the domain cert
+#
+sudo sh -c "echo '15 1 1 */2 * root /mnt/linux/lego/download-cert.sh' >> /etc/cron.d/agh-download-cert"
+#
 # Update logrotate
 #sudo chmod 644 /etc/logrotate.d/autoremove
 
