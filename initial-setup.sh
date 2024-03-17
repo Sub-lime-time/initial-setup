@@ -65,6 +65,10 @@ sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/bac
 sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
 
 sudo systemctl restart autofs
+#
+# Setup SSH for Github
+#
+cp -r /mnt/linux/ssh/* ~/.ssh
 
 #
 # check to make sure that the linux share exists
