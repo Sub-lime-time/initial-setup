@@ -55,7 +55,7 @@ then
    sudo apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 fi
 #sudo pip install glances
-sudo apt install glances
+sudo snap install glances
 echo "Setting up AUTOFS"
 # update NFS Mounts and mount them
 sudo sh -c "echo '' >> /etc/auto.master"
