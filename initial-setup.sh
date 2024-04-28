@@ -47,14 +47,15 @@ sudo apt update
 sudo apt dist-upgrade -y
 sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
    smbclient apt-transport-https ca-certificates curl software-properties-common \
-   micro pip net-tools smartmontools
+   micro net-tools smartmontools
 
 if [ "$virt" = "microsoft" ]
 then
    #only install cloud packages if it's hyper-v
    sudo apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 fi
-sudo pip install glances
+#sudo pip install glances
+sudo apt install glances
 echo "Setting up AUTOFS"
 # update NFS Mounts and mount them
 sudo sh -c "echo '' >> /etc/auto.master"
