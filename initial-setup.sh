@@ -42,7 +42,7 @@ source ~/.bashrc
 # install base packages
 sudo apt update
 sudo apt dist-upgrade -y
-sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
+sudo apt -y install nfs-common ntp landscape-client iperf3 cifs-utils \
    smbclient apt-transport-https ca-certificates curl software-properties-common \
    micro net-tools smartmontools
 
@@ -64,6 +64,7 @@ sudo snap install glances
 sudo systemctl daemon-reload
 echo "Setup AUTOFS"
 # update NFS Mounts and mount them
+sudo apt -y install autofs
 sudo sh -c "echo '' >> /etc/auto.master"
 sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
 sudo sh -c "echo '' >> /etc/auto.nfs"
@@ -109,7 +110,7 @@ sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.
 # Download wilidcard certs
 #
 echo "Certiciate Setup"
-sudo source /mnt/linux/lego/download-cert.sh
+source /mnt/linux/lego/download-cert.sh
 #
 # Update logrotate
 #sudo chmod 644 /etc/logrotate.d/autoremove
