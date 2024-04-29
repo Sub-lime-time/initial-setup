@@ -56,11 +56,12 @@ then
    #only install cloud packages if it's hyper-v
    sudo apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 fi
-sudo systemctl daemon-reload
+
 #
 echo "Install Glances"
 sudo snap install glances
 #
+sudo systemctl daemon-reload
 echo "Setup AUTOFS"
 # update NFS Mounts and mount them
 sudo sh -c "echo '' >> /etc/auto.master"
