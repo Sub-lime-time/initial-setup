@@ -128,7 +128,6 @@ fi
 # install and configure the mail server
 echo "Setup Mail"
 source /mnt/linux/scripts/setup-postfix.sh
-read -n 1 -s -r -p "Press any key to continue"
 echo "Setup ZSH"
 source /mnt/linux/scripts/setup-zsh.sh
 echo "Done!"
