@@ -48,8 +48,6 @@ sudo apt -y install nfs-common ntp landscape-client iperf3 cifs-utils \
 
 # Detmermine the virtualization technology being used
 # qemu = KVM, hyperv = Microsoft
-echo "Setup ZSH"
-source /mnt/linux/scripts/setup-zsh.sh
 
 echo "Setup VM tools"
 virt=$(systemd-detect-virt)
@@ -75,6 +73,10 @@ sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/bac
 sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
 
 sudo systemctl restart autofs
+
+echo "Setup ZSH"
+source /mnt/linux/scripts/setup-zsh.sh
+
 #
 # Setup SSH for Github
 #
