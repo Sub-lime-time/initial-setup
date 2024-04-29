@@ -111,6 +111,7 @@ sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.
 #
 echo "Certiciate Setup"
 source /mnt/linux/lego/download-cert.sh
+read -n 1 -s -r -p "Press any key to continue"
 #
 # Update logrotate
 #sudo chmod 644 /etc/logrotate.d/autoremove
