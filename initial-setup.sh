@@ -33,7 +33,7 @@ do
         esac
 done
 # Update the bashrc to add the NFS Mount directory to the path
-echo "Setting up BASH"
+echo "Updating BASH"
 echo "export PATH=$PATH:/mnt/linux/scripts" >> ~/.bashrc
 source ~/.bashrc
 
@@ -56,6 +56,7 @@ then
    #only install cloud packages if it's hyper-v
    sudo apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 fi
+sudo systemctl daemon-reload
 #
 echo "Install Glances"
 sudo snap install glances
@@ -107,7 +108,7 @@ sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.
 # Download wilidcard certs
 #
 echo "Certiciate Setup"
-source /mnt/linux/lego/download-cert.sh
+sudo source /mnt/linux/lego/download-cert.sh
 #
 # Update logrotate
 #sudo chmod 644 /etc/logrotate.d/autoremove
