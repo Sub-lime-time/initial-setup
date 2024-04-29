@@ -41,8 +41,8 @@ source ~/.bashrc
 #sudo -i
 # install base packages
 sudo apt update
-sudo apt dist-upgrade -y
-sudo apt -y install nfs-common ntp landscape-client iperf3 cifs-utils \
+sudo NEEDRESTART_MODE=a apt dist-upgrade -y
+sudo NEEDRESTART_MODE=a apt -y install nfs-common ntp landscape-client iperf3 cifs-utils \
    smbclient apt-transport-https ca-certificates curl software-properties-common \
    micro net-tools smartmontools
 
@@ -54,7 +54,7 @@ virt=$(systemd-detect-virt)
 if [ "$virt" = "microsoft" ]
 then
    #only install cloud packages if it's hyper-v
-   sudo apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
+   sudo NEEDRESTART_MODE=a apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 fi
 
 #
@@ -64,7 +64,7 @@ sudo snap install glances
 sudo systemctl daemon-reload
 echo "Setup AUTOFS"
 # update NFS Mounts and mount them
-sudo apt -y install autofs
+sudo NEEDRESTART_MODE=a apt -y install autofs
 sudo sh -c "echo '' >> /etc/auto.master"
 sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
 sudo sh -c "echo '' >> /etc/auto.nfs"
