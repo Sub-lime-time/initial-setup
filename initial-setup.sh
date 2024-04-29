@@ -1,9 +1,6 @@
 #! /bin/bash
 
 # Revised: 2021/06/27
-# First, detmermine the virtualization technology being used
-# qemu = KVM, hyperv = Microsoft
-virt=$(systemd-detect-virt)
 
 # Set fqdn hostname
 echo "Setting Hostname..."
@@ -49,14 +46,21 @@ sudo apt -y install nfs-common autofs ntp landscape-client iperf3 cifs-utils \
    smbclient apt-transport-https ca-certificates curl software-properties-common \
    micro net-tools smartmontools
 
+# Detmermine the virtualization technology being used
+# qemu = KVM, hyperv = Microsoft
+
+echo "Setup VM tools"
+virt=$(systemd-detect-virt)
 if [ "$virt" = "microsoft" ]
 then
    #only install cloud packages if it's hyper-v
    sudo apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 fi
-#sudo pip install glances
+#
+echo "Install Glances"
 sudo snap install glances
-echo "Setting up AUTOFS"
+#
+echo "Setup AUTOFS"
 # update NFS Mounts and mount them
 sudo sh -c "echo '' >> /etc/auto.master"
 sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
@@ -82,22 +86,13 @@ if [ ! -f "$FILE" ]; then
 fi
 # set TimeZone
 sudo timedatectl set-timezone America/New_York
-echo "Prep Landscape"
 #
 #setup rsyslog
 #
+echo "Setup rsyslog"
 sudo cp /mnt/linux/setup/rsyslog.d/* /etc/rsyslog.d
 sudo chmod 644 /etc/rsyslog.d/*
 sudo systemctl restart rsyslog
-#
-# prep Landscape Client
-#
-#sudo mkdir -p /etc/landscape
-#sudo cp /mnt/linux/landscape/landscape_server_ca.crt /etc/landscape
-#sudo chgrp landscape /etc/landscape/landscape_server_ca.crt
-#sudo sh -c "echo '[client]' >> /etc/landscape/client.conf"
-#sudo sh -c "echo 'ssl_public_key = /etc/landscape/landscape_server_ca.crt' >> /etc/landscape/client.conf"
-
 #
 # Setup CRON
 #
@@ -109,9 +104,10 @@ hour=$((1 + $RANDOM % 6))
 minute=$((1 + $RANDOM % 59))
 sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.sh' >> /etc/cron.d/system-backup"
 #
-# Setup the system to download the domain cert
+# Download wilidcard certs
 #
-sudo sh -c "echo '15 1 1 */2 * root /mnt/linux/lego/download-cert.sh' >> /etc/cron.d/agh-download-cert"
+echo "Certiciate Setup"
+source /mnt/linux/lego/download-cert.sh
 #
 # Update logrotate
 #sudo chmod 644 /etc/logrotate.d/autoremove
@@ -127,7 +123,9 @@ then
     sudo update-initramfs -u
 fi
 # install and configure the mail server
+echo "Setup Mail"
 source /mnt/linux/scripts/setup-postfix.sh
+echo "Setup ZSH"
 source /mnt/linux/scripts/setup-zsh.sh
 echo "Done!"
 read -n 1 -s -r -p "Press any key to continue"
