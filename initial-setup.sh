@@ -74,9 +74,6 @@ sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/lin
 
 sudo systemctl restart autofs
 
-echo "Setup ZSH"
-source /mnt/linux/scripts/setup-zsh.sh
-
 #
 # Setup SSH for Github
 #
@@ -132,6 +129,10 @@ fi
 # install and configure the mail server
 echo "Setup Mail"
 source /mnt/linux/scripts/setup-postfix.sh
+
+echo "Setup ZSH"
+source /mnt/linux/scripts/setup-zsh.sh
+
 echo "Done!"
 read -n 1 -s -r -p "Press any key to continue"
 sudo reboot
