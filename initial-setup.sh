@@ -48,6 +48,8 @@ sudo apt -y install nfs-common ntp landscape-client iperf3 cifs-utils \
 
 # Detmermine the virtualization technology being used
 # qemu = KVM, hyperv = Microsoft
+echo "Setup ZSH"
+source /mnt/linux/scripts/setup-zsh.sh
 
 echo "Setup VM tools"
 virt=$(systemd-detect-virt)
@@ -128,8 +130,6 @@ fi
 # install and configure the mail server
 echo "Setup Mail"
 source /mnt/linux/scripts/setup-postfix.sh
-echo "Setup ZSH"
-source /mnt/linux/scripts/setup-zsh.sh
 echo "Done!"
 read -n 1 -s -r -p "Press any key to continue"
 sudo reboot
