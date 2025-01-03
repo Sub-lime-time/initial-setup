@@ -57,11 +57,14 @@ source ~/.bashrc
 echo "Installing base packages..."
 sudo apt update && sudo NEEDRESTART_MODE=a apt dist-upgrade -y
 sudo NEEDRESTART_MODE=a apt -y install \
-    nfs-common ntp landscape-client iperf3 cifs-utils \
+    nfs-common ntp landscape-client cifs-utils \
     smbclient apt-transport-https ca-certificates curl software-properties-common \
     micro net-tools smartmontools || {
     echo "Error installing base packages. Exiting."; exit 1;
 }
+echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
+
 # Detmermine the virtualization technology being used
 # qemu = KVM, hyperv = Microsoft
 
