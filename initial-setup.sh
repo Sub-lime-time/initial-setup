@@ -65,13 +65,13 @@ sudo systemctl daemon-reload
 echo "Setup AUTOFS"
 # update NFS Mounts and mount them
 sudo NEEDRESTART_MODE=a apt -y install autofs
-sudo cp /mnt/linux/setup/etc/* /etc
-#sudo sh -c "echo '' >> /etc/auto.master"
-#sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
-#sudo sh -c "echo '' >> /etc/auto.nfs"
-#sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
-#sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
-#sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
+# sudo cp /mnt/linux/setup/etc/* /etc
+sudo sh -c "echo '' >> /etc/auto.master"
+sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
+sudo sh -c "echo '' >> /etc/auto.nfs"
+sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
+sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
+sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
 
 sudo systemctl restart autofs
 
