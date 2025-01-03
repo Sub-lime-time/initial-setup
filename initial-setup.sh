@@ -1,84 +1,119 @@
-#! /bin/bash
+#!/bin/bash
+# Initial Ubuntu System Setup Script
+# Last Revised: 2025/01/03
+# Purpose: Automates initial configuration on new Ubuntu installs
 
-# Revised: 2021/06/27
-
-# Set fqdn hostname
+# Set the FQDN hostname
 echo "Setting Hostname..."
-hn=$(hostname)
-fqdn=$(host -TtA $(hostname -s)|grep "has address"|awk '{print $1}') ;
-if [[ "${fqdn}" == "" ]] ; then fqn=$(hostname -s) ; fi ; 
-echo "Original Hostname : "$hn
-echo "FQDN : "$fqdn
-echo ""
-while true
-do
-        read -r -p "Change Hostname? [Y/n] " input
+current_hostname=$(hostname)
+fqdn=$(hostname --fqdn 2>/dev/null)
 
-        case $input in
-            [yY][eE][sS]|[yY])
-                        # First update the hosts file
-                        sudo sed -i "s/$hn/$fqdn $hn/g" /etc/hosts
-                        # then update the hostname via cmd
-                        # sudo hostnamectl set-hostname $fqdn
- 
-                        break
-                        ;;
-            [nN][oO]|[nN])
-                        echo "No"
-                        break
-                        ;;
-            *)
-                echo "Invalid input..."
-                ;;
-        esac
+if [[ -z "$fqdn" ]]; then
+    fqdn=$(hostname -s) # Default to short hostname if FQDN is unavailable
+    echo "Warning: FQDN not detected. Using short hostname: $fqdn"
+fi
+
+echo "Current Hostname : $current_hostname"
+echo "FQDN : $fqdn"
+echo ""
+
+while true; do
+    read -r -p "Change Hostname to '$fqdn'? [Y/n] " input
+
+    case $input in
+        [yY][eE][sS]|[yY])
+            echo "Updating hostname to $fqdn..."
+            # Update the system's hostname
+            sudo hostnamectl set-hostname "$fqdn"
+
+            # Update /etc/hosts
+            echo "Updating /etc/hosts..."
+            sudo sed -i "s/^127\.0\.1\.1.*/127.0.1.1 $fqdn ${fqdn%%.*}/" /etc/hosts
+
+            echo "Hostname successfully updated to $fqdn"
+            break
+            ;;
+        [nN][oO]|[nN])
+            echo "Hostname change skipped."
+            break
+            ;;
+        *)
+            echo "Invalid input. Please enter 'Y' or 'N'."
+            ;;
+    esac
 done
 # Update the bashrc to add the NFS Mount directory to the path
 echo "Updating BASH"
-echo "export PATH=$PATH:/mnt/linux/scripts" >> ~/.bashrc
+if ! grep -q "/mnt/linux/scripts" ~/.bashrc; then
+    echo "export PATH=\$PATH:/mnt/linux/scripts" >> ~/.bashrc
+fi
 source ~/.bashrc
 
-# Now switch to Root
-#sudo -i
 # install base packages
-sudo apt update
-sudo NEEDRESTART_MODE=a apt dist-upgrade -y
-sudo NEEDRESTART_MODE=a apt -y install nfs-common ntp landscape-client iperf3 cifs-utils \
-   smbclient apt-transport-https ca-certificates curl software-properties-common \
-   micro net-tools smartmontools
 
+echo "Installing base packages..."
+sudo apt update && sudo NEEDRESTART_MODE=a apt dist-upgrade -y
+sudo NEEDRESTART_MODE=a apt -y install \
+    nfs-common ntp landscape-client iperf3 cifs-utils \
+    smbclient apt-transport-https ca-certificates curl software-properties-common \
+    micro net-tools smartmontools || {
+    echo "Error installing base packages. Exiting."; exit 1;
+}
 # Detmermine the virtualization technology being used
 # qemu = KVM, hyperv = Microsoft
 
-echo "Setup VM tools"
 virt=$(systemd-detect-virt)
-if [ "$virt" = "microsoft" ]
-then
-   #only install cloud packages if it's hyper-v
-   sudo NEEDRESTART_MODE=a apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
+if [ "$virt" = "microsoft" ]; then
+    echo "Detected Microsoft Hyper-V. Installing virtualization tools..."
+    sudo NEEDRESTART_MODE=a apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
+else
+    echo "No specific virtualization tools required for $virt."
 fi
 
 #
-echo "Install Glances"
-sudo snap install glances
+echo "Installing Glances for system monitoring..."
+sudo snap install glances || {
+    echo "Failed to install Glances."; exit 1;
+}
 #
 sudo systemctl daemon-reload
-echo "Setup AUTOFS"
-# update NFS Mounts and mount them
-sudo NEEDRESTART_MODE=a apt -y install autofs
-# sudo cp /mnt/linux/setup/etc/* /etc
-sudo sh -c "echo '' >> /etc/auto.master"
-sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
-sudo sh -c "echo '' >> /etc/auto.nfs"
-sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
-sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
-sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
+setup_autofs() {
+    echo "Setting up AUTOFS for NFS mounts..."
+    sudo NEEDRESTART_MODE=a apt -y install autofs
+    sudo sh -c "echo '' >> /etc/auto.master"
+    sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
+    sudo sh -c "echo '' >> /etc/auto.nfs"
+    sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
+    sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
+    sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
+    sudo systemctl restart autofs
+}
+setup_autofs
 
-sudo systemctl restart autofs
+# echo "Setup AUTOFS"
+# # update NFS Mounts and mount them
+# sudo NEEDRESTART_MODE=a apt -y install autofs
+# # sudo cp /mnt/linux/setup/etc/* /etc
+# sudo sh -c "echo '' >> /etc/auto.master"
+# sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
+# sudo sh -c "echo '' >> /etc/auto.nfs"
+# sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
+# sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
+# sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
+
+# sudo systemctl restart autofs
 
 #
 # Setup SSH for Github
 #
-cp -r /mnt/linux/setup/ssh/* ~/.ssh
+echo "Setting up SSH for GitHub..."
+if [ -d /mnt/linux/setup/ssh ]; then
+    cp -r /mnt/linux/setup/ssh/* ~/.ssh
+    chmod 700 ~/.ssh
+    chmod 600 ~/.ssh/*
+else
+    echo "SSH setup directory not found. Skipping..."
+fi
 
 #
 # check to make sure that the linux share exists
@@ -90,7 +125,9 @@ if [ ! -f "$FILE" ]; then
    exit 1 # if it doesn't then stop
 fi
 # set TimeZone
+echo "Setting timezone to America/New_York..."
 sudo timedatectl set-timezone America/New_York
+echo "Current timezone: $(timedatectl | grep 'Time zone')"
 #
 #setup rsyslog
 #
@@ -128,13 +165,28 @@ then
     sudo update-initramfs -u
 fi
 # install and configure the mail server
-echo "Setup Mail"
-source /mnt/linux/scripts/setup-postfix.sh
+echo "Setting up Postfix..."
+if [ -f /mnt/linux/scripts/setup-postfix.sh ]; then
+    source /mnt/linux/scripts/setup-postfix.sh
+else
+    echo "Postfix setup script not found. Skipping..."
+fi
 
 echo "Setup ZSH"
 source /mnt/linux/scripts/setup-zsh.sh
 
 echo "Done!"
-read -n 1 -s -r -p "Press any key to continue"
-sudo reboot
+read -r -p "Setup complete. Reboot now? [Y/n] " input
+case $input in
+    [yY][eE][sS]|[yY])
+        echo "Rebooting system..."
+        sudo reboot
+        ;;
+    [nN][oO]|[nN])
+        echo "Reboot skipped. Please reboot manually to apply changes."
+        ;;
+    *)
+        echo "Invalid input. Reboot skipped."
+        ;;
+esac
 
