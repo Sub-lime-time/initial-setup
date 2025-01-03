@@ -6,29 +6,32 @@
 # Set the FQDN hostname
 echo "Setting Hostname..."
 current_hostname=$(hostname)
-fqdn=$(hostname --fqdn 2>/dev/null)
+domain_name=$(grep DOMAINNAME /run/systemd/netif/leases/* 2>/dev/null | awk -F= '{print $2}')
 
-if [[ -z "$fqdn" ]]; then
-    fqdn=$(hostname -s) # Default to short hostname if FQDN is unavailable
-    echo "Warning: FQDN not detected. Using short hostname: $fqdn"
+if [[ -n "$domain_name" ]]; then
+    fqdn="${current_hostname}.${domain_name}"
+else
+    echo "Warning: No domain name detected from DHCP."
+    fqdn="${current_hostname}"
 fi
 
 echo "Current Hostname : $current_hostname"
 echo "FQDN : $fqdn"
-echo ""
 
 while true; do
     read -r -p "Change Hostname to '$fqdn'? [Y/n] " input
-
     case $input in
         [yY][eE][sS]|[yY])
             echo "Updating hostname to $fqdn..."
             # Update the system's hostname
             sudo hostnamectl set-hostname "$fqdn"
 
+            # Extract short hostname for /etc/hosts
+            short_hostname=$(echo "$fqdn" | cut -d. -f1)
+
             # Update /etc/hosts
             echo "Updating /etc/hosts..."
-            sudo sed -i "s/^127\.0\.1\.1.*/127.0.1.1 $fqdn ${fqdn%%.*}/" /etc/hosts
+            sudo sed -i "s/^127\.0\.1\.1.*/127.0.1.1 $fqdn $short_hostname/" /etc/hosts
 
             echo "Hostname successfully updated to $fqdn"
             break
