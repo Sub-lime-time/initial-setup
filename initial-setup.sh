@@ -62,7 +62,7 @@ echo "Current timezone: $(timedatectl | grep 'Time zone')"
 echo "Installing base packages..."
 sudo apt update && sudo NEEDRESTART_MODE=a apt dist-upgrade -y
 sudo NEEDRESTART_MODE=a apt -y install \
-    nfs-common ntp landscape-client cifs-utils \
+    nfs-common ntp cifs-utils \
     smbclient apt-transport-https ca-certificates curl software-properties-common \
     micro net-tools smartmontools || {
     echo "Error installing base packages. Exiting."; exit 1;
