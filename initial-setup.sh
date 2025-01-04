@@ -52,6 +52,11 @@ if ! grep -q "/mnt/linux/scripts" ~/.bashrc; then
 fi
 source ~/.bashrc
 
+# set TimeZone
+echo "Setting timezone to America/New_York..."
+sudo timedatectl set-timezone America/New_York
+echo "Current timezone: $(timedatectl | grep 'Time zone')"
+#
 # install base packages
 
 echo "Installing base packages..."
@@ -96,19 +101,6 @@ setup_autofs() {
 }
 setup_autofs
 
-# echo "Setup AUTOFS"
-# # update NFS Mounts and mount them
-# sudo NEEDRESTART_MODE=a apt -y install autofs
-# # sudo cp /mnt/linux/setup/etc/* /etc
-# sudo sh -c "echo '' >> /etc/auto.master"
-# sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
-# sudo sh -c "echo '' >> /etc/auto.nfs"
-# sudo sh -c "echo '# NFS Mounts' >> /etc/auto.nfs"
-# sudo sh -c "echo 'backup -fstype=nfs4,rw,soft    hal.hq.802ski.com:/mnt/user/backup' >> /etc/auto.nfs"
-# sudo sh -c "echo 'linux -fstype=nfs4,rw,soft     hal.hq.802ski.com:/mnt/user/linux' >> /etc/auto.nfs"
-
-# sudo systemctl restart autofs
-
 #
 # Setup SSH for Github
 #
@@ -130,11 +122,7 @@ if [ ! -f "$FILE" ]; then
    echo "NFS File share not available!"
    exit 1 # if it doesn't then stop
 fi
-# set TimeZone
-echo "Setting timezone to America/New_York..."
-sudo timedatectl set-timezone America/New_York
-echo "Current timezone: $(timedatectl | grep 'Time zone')"
-#
+
 #setup rsyslog
 #
 echo "Setup rsyslog"
@@ -145,7 +133,7 @@ sudo systemctl restart rsyslog
 # Setup CRON
 #
 echo "Populating CRON"
-sudo cp /mnt/linux/setup/cron/* /etc/cron.d
+sudo cp -v /mnt/linux/setup/cron/* /etc/cron.d
 sudo chmod 644 /etc/cron.d/*
 # let's randomize the backup time and update the cron job
 hour=$((1 + $RANDOM % 6))
