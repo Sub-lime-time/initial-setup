@@ -13,6 +13,7 @@ if [[ -n "$domain_name" ]]; then
 else
     echo "Warning: No domain name detected from DHCP."
     fqdn="${current_hostname}"
+    read "Enter fqdn :" fqdn
 fi
 
 echo "Current Hostname : $current_hostname"
@@ -135,7 +136,7 @@ sudo systemctl restart rsyslog
 echo "Populating CRON"
 
 # Populate the /etc/cron.d folder and copy scripts to /usr/local/bin
-source /mnt/linux/scripts/sync-distributed.sh
+sudo source /mnt/linux/scripts/sync-distributed.sh
 sudo cp -v /mnt/linux/setup/cron/* /etc/cron.d
 sudo chmod 644 /etc/cron.d/*
 # let's randomize the backup time and update the cron job
@@ -163,8 +164,8 @@ then
 fi
 # install and configure the mail server
 echo "Setting up Postfix..."
-if [ -f /mnt/linux/scripts/setup-postfix.sh ]; then
-    source /mnt/linux/scripts/setup-postfix.sh
+if [ -f /mnt/linux/scripts/setup_postfix_v2.sh ]; then
+    source /mnt/linux/scripts/setup_postfix_v2.sh
 else
     echo "Postfix setup script not found. Skipping..."
 fi
