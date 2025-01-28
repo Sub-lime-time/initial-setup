@@ -6,6 +6,11 @@
 # Set the FQDN hostname
 echo "Setting Hostname..."
 current_hostname=$(hostname)
+
+# Add Time for pauses (sleeps) as script runs
+SHORT_DELAY=2
+LONG_DELAY=5
+
 domain_name=$(grep DOMAINNAME /run/systemd/netif/leases/* 2>/dev/null | awk -F= '{print $2}')
 
 if [[ -n "$domain_name" ]]; then
@@ -48,6 +53,7 @@ while true; do
 done
 # Update the bashrc to add the NFS Mount directory to the path
 echo "Updating BASH"
+sleep $SHORT_DELAY
 if ! grep -q "/mnt/linux/scripts" ~/.bashrc; then
     echo "export PATH=\$PATH:/mnt/linux/scripts" >> ~/.bashrc
 fi
@@ -55,12 +61,14 @@ source ~/.bashrc
 
 # set TimeZone
 echo "Setting timezone to America/New_York..."
+sleep $SHORT_DELAY
 sudo timedatectl set-timezone America/New_York
 echo "Current timezone: $(timedatectl | grep 'Time zone')"
 #
 # install base packages
 
 echo "Installing base packages..."
+sleep $SHORT_DELAY
 sudo apt update && sudo NEEDRESTART_MODE=a apt dist-upgrade -y
 sudo NEEDRESTART_MODE=a apt -y install \
     nfs-common ntp cifs-utils \
@@ -68,22 +76,28 @@ sudo NEEDRESTART_MODE=a apt -y install \
     micro net-tools smartmontools || {
     echo "Error installing base packages. Exiting."; exit 1;
 }
+sleep $SHORT_DELAY
 echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
 
 # Detmermine the virtualization technology being used
-# qemu = KVM, hyperv = Microsoft
+# kvm = qemu, hyperv = Microsoft
 
 virt=$(systemd-detect-virt)
 if [ "$virt" = "microsoft" ]; then
     echo "Detected Microsoft Hyper-V. Installing virtualization tools..."
     sudo NEEDRESTART_MODE=a apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
+elseif [ "$virt" = "kvmq" ]; then
+    echo "Detected KVM/QEMU. Installing virtualization tools..."
+    sudo NEEDRESTART_MODE=a apt -y install qemu-guest-agent
+    sudo systemctl enable qemu-guest-agent
 else
     echo "No specific virtualization tools required for $virt."
 fi
 
 #
 echo "Installing Glances for system monitoring..."
+sleep $SHORT_DELAY
 sudo snap install glances || {
     echo "Failed to install Glances."; exit 1;
 }
@@ -91,6 +105,7 @@ sudo snap install glances || {
 sudo systemctl daemon-reload
 setup_autofs() {
     echo "Setting up AUTOFS for NFS mounts..."
+    sleep $SHORT_DELAY
     sudo NEEDRESTART_MODE=a apt -y install autofs
     sudo sh -c "echo '' >> /etc/auto.master"
     sudo sh -c "echo '/mnt    /etc/auto.nfs --timeout=180' >> /etc/auto.master"
@@ -105,7 +120,10 @@ setup_autofs
 #
 # Setup SSH for Github
 #
+
 echo "Setting up SSH for GitHub..."
+sleep $SHORT_DELAY
+
 if [ -d /mnt/linux/setup/ssh ]; then
     cp -r /mnt/linux/setup/ssh/* ~/.ssh
     chmod 700 ~/.ssh
@@ -117,7 +135,7 @@ fi
 #
 # check to make sure that the linux share exists
 #
-sleep 5s
+sleep $LONG_DELAYs
 FILE=/mnt/linux/scripts/setup_postfix_v2.sh
 if [ ! -f "$FILE" ]; then
    echo "NFS File share not available!"
@@ -126,7 +144,9 @@ fi
 
 #setup rsyslog
 #
+
 echo "Setup rsyslog"
+sleep $SHORT_DELAY
 sudo cp /mnt/linux/setup/rsyslog.d/* /etc/rsyslog.d
 sudo chmod 644 /etc/rsyslog.d/*
 sudo systemctl restart rsyslog
@@ -134,7 +154,7 @@ sudo systemctl restart rsyslog
 # Setup CRON
 #
 echo "Populating CRON"
-
+sleep $LONG_DELAY
 # Populate the /etc/cron.d folder and copy scripts to /usr/local/bin
 sudo source /mnt/linux/scripts/sync-distributed.sh
 sudo cp -v /mnt/linux/setup/cron/* /etc/cron.d
@@ -147,6 +167,7 @@ sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.
 # Download wilidcard certs
 #
 echo "Certiciate Setup"
+sleep $LONG_DELAY
 source /mnt/linux/lego/download-cert.sh
 #
 # Update logrotate
@@ -161,13 +182,10 @@ then
     sudo sh -c "echo 'hv_blkvsc' >> /etc/initramfs-tools/modules"
     sudo sh -c "echo 'hv_netvsc' >> /etc/initramfs-tools/modules"
     sudo update-initramfs -u
-else
-    # Setup qemu-guest-agent for UnRaid VMs
-    sudo apt install qemu-guest-agent
-    sudo systemctl enable qemu-guest-agent
 fi
 # install and configure the mail server
 echo "Setting up Postfix..."
+sleep $SHORT_DELAY
 if [ -f /mnt/linux/scripts/setup_postfix_v2.sh ]; then
     source /mnt/linux/scripts/setup_postfix_v2.sh
 else
@@ -175,10 +193,12 @@ else
 fi
 
 echo "Setup ZSH"
+sleep $SHORT_DELAY
 source /mnt/linux/scripts/setup-zsh.sh
 
 echo "Done!"
 read -r -p "Setup complete. Reboot now? [Y/n] " input
+input=${input:-Y}
 case $input in
     [yY][eE][sS]|[yY])
         echo "Rebooting system..."
