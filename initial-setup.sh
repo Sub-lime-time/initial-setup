@@ -13,7 +13,7 @@ if [[ -n "$domain_name" ]]; then
 else
     echo "Warning: No domain name detected from DHCP."
     fqdn="${current_hostname}"
-    read "Enter fqdn :" fqdn
+    read -p "Enter fqdn :" fqdn
 fi
 
 echo "Current Hostname : $current_hostname"
