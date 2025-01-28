@@ -156,7 +156,7 @@ sudo systemctl restart rsyslog
 echo "Populating CRON"
 sleep $LONG_DELAY
 # Populate the /etc/cron.d folder and copy scripts to /usr/local/bin
-sudo source /mnt/linux/scripts/sync-distributed.sh
+sudo source mnt/linux/scripts/sync-distributed.sh 
 sudo cp -v /mnt/linux/setup/cron/* /etc/cron.d
 sudo chmod 644 /etc/cron.d/*
 # let's randomize the backup time and update the cron job
