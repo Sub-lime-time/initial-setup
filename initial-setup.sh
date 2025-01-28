@@ -161,6 +161,10 @@ then
     sudo sh -c "echo 'hv_blkvsc' >> /etc/initramfs-tools/modules"
     sudo sh -c "echo 'hv_netvsc' >> /etc/initramfs-tools/modules"
     sudo update-initramfs -u
+else
+    # Setup qemu-guest-agent for UnRaid VMs
+    sudo apt install qemu-guest-agent
+    sudo systemctl enable qemu-guest-agent
 fi
 # install and configure the mail server
 echo "Setting up Postfix..."
