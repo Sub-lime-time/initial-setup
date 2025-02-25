@@ -87,7 +87,7 @@ virt=$(systemd-detect-virt)
 if [ "$virt" = "microsoft" ]; then
     echo "Detected Microsoft Hyper-V. Installing virtualization tools..."
     sudo NEEDRESTART_MODE=a apt -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
-elseif [ "$virt" = "kvmq" ]; then
+elif [ "$virt" = "kvmq" ]; then
     echo "Detected KVM/QEMU. Installing virtualization tools..."
     sudo NEEDRESTART_MODE=a apt -y install qemu-guest-agent
     sudo systemctl enable qemu-guest-agent
@@ -135,7 +135,7 @@ fi
 #
 # check to make sure that the linux share exists
 #
-sleep $LONG_DELAYs
+sleep $LONG_DELAY
 FILE=/mnt/linux/scripts/setup_postfix_v2.sh
 if [ ! -f "$FILE" ]; then
    echo "NFS File share not available!"
@@ -156,7 +156,7 @@ sudo systemctl restart rsyslog
 echo "Populating CRON"
 sleep $LONG_DELAY
 # Populate the /etc/cron.d folder and copy scripts to /usr/local/bin
-sudo source mnt/linux/scripts/sync-distributed.sh 
+sudo bash -c 'source /mnt/linux/scripts/sync-distributed.sh'
 sudo cp -v /mnt/linux/setup/cron/* /etc/cron.d
 sudo chmod 644 /etc/cron.d/*
 # let's randomize the backup time and update the cron job
