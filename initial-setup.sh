@@ -162,7 +162,7 @@ sudo chmod 644 /etc/cron.d/*
 # let's randomize the backup time and update the cron job
 hour=$((1 + $RANDOM % 6))
 minute=$((1 + $RANDOM % 59))
-sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/system-backup.sh' >> /etc/cron.d/system-backup"
+sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/backup-system.sh' >> /etc/cron.d/backup-system"
 #
 # Download wilidcard certs
 #
