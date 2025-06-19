@@ -181,6 +181,11 @@ setup_ssh_github() {
     else
         warn "SSH config directory not found. Skipping..."
     fi
+
+    # In your script, check if the file exists before copying
+    if [ -f "$(dirname "$0")/configs/ssh/github" ]; then
+        cp "$(dirname "$0")/configs/ssh/github" ~/.ssh/
+    fi
 }
 
 setup_ssh_hardening() {
