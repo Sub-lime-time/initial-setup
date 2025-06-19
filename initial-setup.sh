@@ -310,16 +310,26 @@ reboot_prompt() {
 
 wait_for_1password_signin() {
     if command -v op &> /dev/null; then
-        log "Please sign in to 1Password CLI to enable secret access."
+        log "Adding 1Password account to CLI."
         op_signin_address="my.1password.com"
         read -p "1Password email: " op_email
         read -p "1Password Secret Key (starts with A3-...): " op_secret
+        read -p "1Password account name (press Enter for default): " op_account_name
+        # Add the account
+        if [ -z "$op_account_name" ]; then
+            echo -e "$op_signin_address\n$op_email\n$op_secret\n" | op account add
+        else
+            echo -e "$op_signin_address\n$op_email\n$op_secret\n$op_account_name\n" | op account add
+        fi
+        # Now sign in
+        log "Please sign in to 1Password CLI to enable secret access."
         read -s -p "1Password Master Password: " op_password
         echo
-
-        # Run op signin non-interactively
-        eval $(echo "$op_password" | op signin "$op_signin_address" "$op_email" "$op_secret" --raw 2>/dev/null)
-
+        if [ -z "$op_account_name" ]; then
+            eval $(echo "$op_password" | op signin "$op_signin_address" "$op_email" "$op_secret" --raw 2>/dev/null)
+        else
+            eval $(echo "$op_password" | op signin "$op_signin_address" "$op_email" "$op_secret" "$op_account_name" --raw 2>/dev/null)
+        fi
         # Check if sign-in was successful
         if op account get &> /dev/null; then
             log "1Password CLI sign-in successful. Continuing setup."
