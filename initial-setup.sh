@@ -314,14 +314,8 @@ wait_for_1password_signin() {
         op_signin_address="my.1password.com"
         read -p "1Password email: " op_email
         read -p "1Password Secret Key (starts with A3-...): " op_secret
-        read -p "1Password account name (press Enter for default): " op_account_name
-
-        # Add the account using flags
-        if [ -z "$op_account_name" ]; then
-            op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret"
-        else
-            op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
-        fi
+        op_account_name="The Family"
+        op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
 
         # Now sign in
         log "Please sign in to 1Password CLI to enable secret access."
