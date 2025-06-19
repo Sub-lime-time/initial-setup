@@ -82,16 +82,18 @@ install_packages() {
 install_1password() {
     log "Installing 1Password CLI..."
     sleep $SHORT_DELAY
-    sudo apt-get update
-    sudo apt-get install -y curl gnupg2
-    # Add the 1Password GPG key
+    # Official 1Password CLI install script with debsig policy and architecture awareness
     curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-        sudo gpg --dearmor -o /usr/share/keyrings/1password-archive-keyring.gpg
-    # Add the 1Password APT repository
-    echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/amd64 stable main' | \
-        sudo tee /etc/apt/sources.list.d/1password.list
-    sudo apt-get update
-    sudo apt-get install -y 1password-cli
+      sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+      sudo tee /etc/apt/sources.list.d/1password.list && \
+      sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/ && \
+      curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
+      sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol && \
+      sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22 && \
+      curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+      sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg && \
+      sudo apt update && sudo apt install -y 1password-cli
     if command -v op &> /dev/null; then
         log "1Password CLI installed successfully."
     else
@@ -310,27 +312,8 @@ reboot_prompt() {
 
 wait_for_1password_signin() {
     if command -v op &> /dev/null; then
-        log "Adding 1Password account to CLI."
-        op_signin_address="my.1password.com"
-        read -p "1Password email: " op_email
-        read -p "1Password Secret Key (starts with A3-...): " op_secret
-        read -p "1Password account name (press Enter for default): " op_account_name
-
-        # Add the account using flags (will prompt for master password)
-        if [ -z "$op_account_name" ]; then
-            op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret"
-        else
-            op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
-        fi
-
-        # Now sign in (will use the account just added)
         log "Signing in to 1Password CLI to enable secret access."
-        if [ -z "$op_account_name" ]; then
-            eval "$(op signin "$op_signin_address" "$op_email" "$op_secret" --raw 2>/dev/null)"
-        else
-            eval "$(op signin "$op_signin_address" "$op_email" "$op_secret" "$op_account_name" --raw 2>/dev/null)"
-        fi
-
+        eval "$(op signin)"
         # Check if sign-in was successful
         if op account get &> /dev/null; then
             log "1Password CLI sign-in successful. Continuing setup."
