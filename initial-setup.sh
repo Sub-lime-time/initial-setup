@@ -152,7 +152,7 @@ setup_cron() {
 download_certs() {
     log "Certificate Setup"
     sleep $LONG_DELAY
-    source /mnt/linux/lego/download-cert.sh
+    source /mnt/linux/scripts/distribute-certs.sh
 }
 
 setup_postfix() {
