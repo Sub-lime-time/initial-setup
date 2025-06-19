@@ -308,13 +308,30 @@ reboot_prompt() {
     esac
 }
 
-main() {
-    install_1password
+wait_for_1password_signin() {
     if command -v op &> /dev/null; then
         log "Please sign in to 1Password CLI to enable secret access."
-        echo "Run: op signin"
-        read -p "Press Enter after you have signed in to 1Password CLI..."
+        op_signin_address="my.1password.com"
+        read -p "1Password email: " op_email
+        read -p "1Password Secret Key (starts with A3-...): " op_secret
+        read -s -p "1Password Master Password: " op_password
+        echo
+
+        # Run op signin non-interactively
+        eval $(echo "$op_password" | op signin "$op_signin_address" "$op_email" "$op_secret" --raw 2>/dev/null)
+
+        # Check if sign-in was successful
+        if op account get &> /dev/null; then
+            log "1Password CLI sign-in successful. Continuing setup."
+        else
+            error "1Password CLI sign-in failed. Please check your credentials and try again."
+        fi
     fi
+}
+
+main() {
+    install_1password
+    wait_for_1password_signin
     set_hostname
     update_bashrc
     set_timezone
