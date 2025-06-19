@@ -310,6 +310,26 @@ reboot_prompt() {
     esac
 }
 
+wait_for_1password_account_add() {
+    if command -v op &> /dev/null; then
+        log "Adding 1Password account to CLI."
+        op_signin_address="my.1password.com"
+        read -p "1Password email: " op_email
+        read -p "1Password Secret Key (starts with A3-...): " op_secret
+        op_account_name="The Family"
+
+        # Add the account using flags (will prompt for master password)
+        op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
+
+        # Optionally, check if the account was added
+        if op account list | grep -q "$op_email"; then
+            log "1Password account added successfully."
+        else
+            error "1Password account add failed. Please check your credentials and try again."
+        fi
+    fi
+}
+
 wait_for_1password_signin() {
     if command -v op &> /dev/null; then
         log "Signing in to 1Password CLI to enable secret access."
@@ -325,6 +345,7 @@ wait_for_1password_signin() {
 
 main() {
     install_1password
+    wait_for_1password_account_add
     wait_for_1password_signin
     set_hostname
     update_bashrc
