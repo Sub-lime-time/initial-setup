@@ -312,16 +312,25 @@ reboot_prompt() {
 
 wait_for_1password_account_add() {
     if command -v op &> /dev/null; then
+        echo ""
+        echo "────────────────────────────────────────────────────────────"
+        echo "🔑  1Password Setup: Use your Keyboard Maestro hotkeys!"
+        echo ""
+        echo "  ⌃⌥⌘S   →   Paste your 1Password Secret Key"
+        echo "  ⌃⌥⌘P   →   Paste your 1Password Master Password"
+        echo ""
+        echo "When prompted below, use the hotkeys above to quickly fill in your credentials."
+        echo "────────────────────────────────────────────────────────────"
+        echo ""
+
         log "Adding 1Password account to CLI."
         op_signin_address="my.1password.com"
         read -p "1Password email: " op_email
         read -p "1Password Secret Key (starts with A3-...): " op_secret
         op_account_name="The Family"
 
-        # Add the account using flags (will prompt for master password)
         op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
 
-        # Optionally, check if the account was added
         if op account list | grep -q "$op_email"; then
             log "1Password account added successfully."
         else
