@@ -314,18 +314,23 @@ wait_for_1password_signin() {
         op_signin_address="my.1password.com"
         read -p "1Password email: " op_email
         read -p "1Password Secret Key (starts with A3-...): " op_secret
-        op_account_name="The Family"
-        op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
+        read -p "1Password account name (press Enter for default): " op_account_name
 
-        # Now sign in
-        log "Please sign in to 1Password CLI to enable secret access."
-        read -s -p "1Password Master Password: " op_password
-        echo
+        # Add the account using flags (will prompt for master password)
         if [ -z "$op_account_name" ]; then
-            eval $(echo "$op_password" | op signin "$op_signin_address" "$op_email" "$op_secret" --raw 2>/dev/null)
+            op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret"
         else
-            eval $(echo "$op_password" | op signin "$op_signin_address" "$op_email" "$op_secret" "$op_account_name" --raw 2>/dev/null)
+            op account add --address "$op_signin_address" --email "$op_email" --secret-key "$op_secret" --shorthand "$op_account_name"
         fi
+
+        # Now sign in (will use the account just added)
+        log "Signing in to 1Password CLI to enable secret access."
+        if [ -z "$op_account_name" ]; then
+            eval "$(op signin "$op_signin_address" "$op_email" "$op_secret" --raw 2>/dev/null)"
+        else
+            eval "$(op signin "$op_signin_address" "$op_email" "$op_secret" "$op_account_name" --raw 2>/dev/null)"
+        fi
+
         # Check if sign-in was successful
         if op account get &> /dev/null; then
             log "1Password CLI sign-in successful. Continuing setup."
