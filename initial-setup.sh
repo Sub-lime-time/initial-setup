@@ -156,6 +156,19 @@ setup_samba() {
     log "Samba setup complete."
 }
 
+setup_github_ssh_key_from_server() {
+    read -p "Enter the hostname or IP of an existing server with the GitHub SSH key: " source_server
+    if ssh "$source_server" test -f /home/greg/.ssh/id_ed25519; then
+        scp "$source_server:/home/greg/.ssh/id_ed25519" ~/.ssh/id_ed25519
+        scp "$source_server:/home/greg/.ssh/id_ed25519.pub" ~/.ssh/id_ed25519.pub
+        chmod 600 ~/.ssh/id_ed25519
+        chmod 644 ~/.ssh/id_ed25519.pub
+        log "GitHub SSH key copied from $source_server."
+    else
+        warn "Key not found on $source_server. Skipping."
+    fi
+}
+
 setup_ssh_github() {
     log "Setting up SSH for GitHub..."
     sleep $SHORT_DELAY
@@ -277,6 +290,7 @@ main() {
     install_glances
     setup_autofs
     setup_samba
+    setup_github_ssh_key_from_server
     setup_ssh_github
     setup_ssh_hardening
     check_nfs_share
@@ -285,6 +299,7 @@ main() {
     download_certs
     setup_postfix
     setup_zsh
+    
     reboot_prompt
 }
 
