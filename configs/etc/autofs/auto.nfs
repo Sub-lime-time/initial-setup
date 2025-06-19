@@ -1,0 +1,4 @@
+
+# NFS4 Mounts
+backup -fstype=nfs4,rw,soft hal.hq.802ski.com:/mnt/user/backup
+linux  -fstype=nfs4,rw,soft hal.hq.802ski.com:/mnt/user/linux
