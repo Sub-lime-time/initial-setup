@@ -19,7 +19,12 @@ set_hostname() {
     current_hostname=$(hostname)
     domain_name=$(grep DOMAINNAME /run/systemd/netif/leases/* 2>/dev/null | awk -F= '{print $2}')
     if [[ -n "$domain_name" ]]; then
-        fqdn="${current_hostname}.${domain_name}"
+        # Only append domain if not already present
+        if [[ "$current_hostname" == *.$domain_name ]]; then
+            fqdn="$current_hostname"
+        else
+            fqdn="${current_hostname}.${domain_name}"
+        fi
     else
         warn "No domain name detected from DHCP."
         fqdn="${current_hostname}"
@@ -72,6 +77,26 @@ install_packages() {
     sleep $SHORT_DELAY
     echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
+}
+
+install_1password() {
+    log "Installing 1Password CLI..."
+    sleep $SHORT_DELAY
+    sudo apt-get update
+    sudo apt-get install -y curl gnupg2
+    # Add the 1Password GPG key
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor -o /usr/share/keyrings/1password-archive-keyring.gpg
+    # Add the 1Password APT repository
+    echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/amd64 stable main' | \
+        sudo tee /etc/apt/sources.list.d/1password.list
+    sudo apt-get update
+    sudo apt-get install -y 1password-cli
+    if command -v op &> /dev/null; then
+        log "1Password CLI installed successfully."
+    else
+        error "1Password CLI installation failed."
+    fi
 }
 
 setup_virtualization_tools() {
@@ -157,15 +182,17 @@ setup_samba() {
 }
 
 setup_github_ssh_key_from_server() {
-    read -p "Enter the hostname or IP of an existing server with the GitHub SSH key: " source_server
-    if ssh "$source_server" test -f /home/greg/.ssh/id_ed25519; then
-        scp "$source_server:/home/greg/.ssh/id_ed25519" ~/.ssh/id_ed25519
-        scp "$source_server:/home/greg/.ssh/id_ed25519.pub" ~/.ssh/id_ed25519.pub
-        chmod 600 ~/.ssh/id_ed25519
-        chmod 644 ~/.ssh/id_ed25519.pub
-        log "GitHub SSH key copied from $source_server."
+    log "Fetching GitHub SSH key from 1Password CLI..."
+    if command -v op &> /dev/null; then
+        # Fetch private key
+        op read "op://Private/id_ed25519_github/private key" > ~/.ssh/github
+        chmod 600 ~/.ssh/github
+        # Write public key
+        echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH7vspSV++pdVro1MbLaHuHZFbMWA27DG70iKKtXyLf0" > ~/.ssh/github.pub
+        chmod 644 ~/.ssh/github.pub
+        log "GitHub SSH key fetched from 1Password and installed."
     else
-        warn "Key not found on $source_server. Skipping."
+        warn "1Password CLI (op) not found. Skipping GitHub SSH key setup."
     fi
 }
 
@@ -282,6 +309,12 @@ reboot_prompt() {
 }
 
 main() {
+    install_1password
+    if command -v op &> /dev/null; then
+        log "Please sign in to 1Password CLI to enable secret access."
+        echo "Run: op signin"
+        read -p "Press Enter after you have signed in to 1Password CLI..."
+    fi
     set_hostname
     update_bashrc
     set_timezone
