@@ -218,7 +218,7 @@ setup_rsyslog() {
 setup_cron() {
     log "Populating CRON"
     sleep $LONG_DELAY
-    sudo bash -c "source $(dirname "$0")/scripts/sync-distributed.sh"
+    sudo bash -c "source /mnt/linux/scripts/sync-distributed.sh"
     sudo cp -v "$(dirname "$0")/configs/cron/"* /etc/cron.d
     sudo chmod 644 /etc/cron.d/*
     # Remove any previous backup-system.sh lines before adding a new one (idempotency)
@@ -232,7 +232,7 @@ setup_cron() {
 download_certs() {
     log "Certificate Setup"
     sleep $LONG_DELAY
-    source "$(dirname "$0")/scripts/download-cert.sh"
+    source "/mnt/linux/scripts/manage-certs.sh"
 }
 
 setup_postfix() {
