@@ -1,1 +1,1 @@
-0 4 * * * root /mnt/linux/scripts/manage-certs.sh
+0 4 * * * root /mnt/linux/scripts/manage-certs.sh  > /dev/null 2>&1
