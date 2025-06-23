@@ -7,7 +7,6 @@
 
 set -euo pipefail
 
-export OP_ACCOUNT="The Family"
 
 SHORT_DELAY=2
 LONG_DELAY=5
@@ -327,7 +326,7 @@ wait_for_1password_account_add() {
 
         log "Adding 1Password account to CLI."
         op_signin_address="my.1password.com"
-        read -p "1Password email: " op_email
+        op_email="greg@802ski.com"
         read -p "1Password Secret Key (starts with A3-...): " op_secret
         op_account_name="The Family"
 
