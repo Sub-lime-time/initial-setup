@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-export OP_ACCOUNT="greg@802ski.com"
+export OP_ACCOUNT="The Family"
 
 SHORT_DELAY=2
 LONG_DELAY=5
