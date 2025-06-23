@@ -40,8 +40,8 @@ main() {
         log INFO "Installing Postfix and dependencies..."
         echo "postfix postfix/mailname string $FQDN" | sudo debconf-set-selections
         echo "postfix postfix/main_mailer_type select Internet Site" | sudo debconf-set-selections
-        sudo apt-get update | tee -a "$LOG_FILE"
-        sudo apt-get install -y mailutils libsasl2-modules postfix | tee -a "$LOG_FILE"
+        sudo apt-get update | sudo tee -a "$LOG_FILE"
+        sudo apt-get install -y mailutils libsasl2-modules postfix | sudo tee -a "$LOG_FILE"
     else
         log INFO "Postfix already installed. Skipping installation."
     fi
@@ -102,7 +102,7 @@ main() {
 
     # --- Restart Postfix ---
     log INFO "Restarting Postfix"
-    sudo systemctl restart postfix | tee -a "$LOG_FILE"
+    sudo systemctl restart postfix | sudo tee -a "$LOG_FILE"
 
     # --- Test email ---
     log INFO "Sending test email to $TEST_EMAIL_RECIPIENT and logging headers for verification"
@@ -118,7 +118,7 @@ EOF
     MAIL_LOG_FILE="$HOME/mbox"
     if [[ -f "$MAIL_LOG_FILE" ]]; then
         log INFO "Logging last message headers from $MAIL_LOG_FILE for verification:"
-        awk '/^From /{f=0} {if(f)print} /^From /{f=1}' "$MAIL_LOG_FILE" | head -20 | tee -a "$LOG_FILE"
+        awk '/^From /{f=0} {if(f)print} /^From /{f=1}' "$MAIL_LOG_FILE" | head -20 | sudo tee -a "$LOG_FILE"
     else
         log INFO "Mail spool file $MAIL_LOG_FILE not found; cannot log headers."
     fi
