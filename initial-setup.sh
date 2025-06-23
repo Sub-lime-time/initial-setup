@@ -144,17 +144,11 @@ setup_autofs() {
 setup_samba() {
     log "Setting up SAMBA..."
     sleep $SHORT_DELAY
-    
-    # Add Samba PPA repository for latest version
-    log "Adding Samba PPA repository..."
-    sudo apt-get install -y software-properties-common
-    sudo add-apt-repository ppa:samba-team/stable -y
-    sudo apt-get update
-    
-    # Install Samba packages
+
+    # Install Samba packages from official Ubuntu repo
     log "Installing Samba packages..."
     sudo NEEDRESTART_MODE=a apt-get -y install samba samba-common-bin || error "Error installing Samba packages. Exiting."
-    
+
     # Copy Samba configuration files
     if [ -f "$(dirname "$0")/configs/etc/samba/smb.conf" ]; then
         sudo cp "$(dirname "$0")/configs/etc/samba/smb.conf" /etc/samba/smb.conf
@@ -163,7 +157,7 @@ setup_samba() {
     else
         warn "Samba config file not found in configs/etc/samba/. Using default configuration."
     fi
-    
+
     # Create Samba user if needed
     read -r -p "Create Samba user? [y/N] " input
     case $input in
@@ -175,12 +169,12 @@ setup_samba() {
             log "Samba user creation skipped."
             ;;
     esac
-    
+
     # Enable and start Samba services
     log "Enabling and starting Samba services..."
     sudo systemctl enable smbd nmbd
     sudo systemctl restart smbd nmbd
-    
+
     log "Samba setup complete."
 }
 
