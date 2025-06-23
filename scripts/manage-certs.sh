@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Logging setup
 LOG_FILE="/var/log/manage-certs.log"
-mkdir -p "$(dirname "$LOG_FILE")"
+sudo mkdir -p "$(dirname "$LOG_FILE")"
 log()   { echo -e "\033[1;32m[INFO]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | tee -a "$LOG_FILE"; }
 warn()  { echo -e "\033[1;33m[WARN]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | tee -a "$LOG_FILE"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | tee -a "$LOG_FILE"; exit 1; }
