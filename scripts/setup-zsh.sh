@@ -70,11 +70,22 @@ clone_dotfiles() {
     if yadm list | grep -q ".zshrc"; then
         echo "[OK] Dotfiles already managed by yadm."
     else
-        echo "[INFO] Cloning dotfiles with yadm..."
-        yadm clone -f "$DOTFILES_REPO" || {
-            echo "[ERROR] Failed to clone dotfiles."
-            exit 1
-        }
+        # Start ssh-agent and add GitHub key if it exists
+        if [ -f "$HOME/.ssh/github" ]; then
+            echo "[INFO] Starting ssh-agent and adding GitHub key for yadm clone..."
+            eval "$(ssh-agent -s)"
+            ssh-add "$HOME/.ssh/github"
+            DOTFILES_REPO_SSH="git@github.com:Sub-Lime-Time/dotfiles.git"
+            echo "[INFO] Cloning dotfiles with yadm (SSH)..."
+            yadm clone -f "$DOTFILES_REPO_SSH" || {
+                echo "[ERROR] Failed to clone dotfiles via SSH."; exit 1;
+            }
+        else
+            echo "[INFO] GitHub SSH key not found, cloning dotfiles with HTTPS..."
+            yadm clone -f "$DOTFILES_REPO" || {
+                echo "[ERROR] Failed to clone dotfiles."; exit 1;
+            }
+        fi
     fi
 }
 
