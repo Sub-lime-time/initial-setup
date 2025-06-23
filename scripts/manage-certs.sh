@@ -36,7 +36,7 @@ LE_CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
 LE_FULLCHAIN="$LE_CERT_PATH/fullchain.pem"
 LE_PRIVKEY="$LE_CERT_PATH/privkey.pem"
 
-mkdir -p "$CANONICAL_CERT_DIR"
+sudo mkdir -p "$CANONICAL_CERT_DIR"
 
 determine_role() {
   case "$HOSTNAME" in
@@ -50,28 +50,28 @@ sync_certs() {
   case "$ROLE" in
     cert_master)
       if [[ "$LE_FULLCHAIN" -nt "$NFS_FULLCHAIN" || "$LE_PRIVKEY" -nt "$NFS_PRIVKEY" ]]; then
-        mkdir -p "$NFS_CERT_PATH"
-        cp "$LE_FULLCHAIN" "$NFS_FULLCHAIN"
-        cp "$LE_PRIVKEY" "$NFS_PRIVKEY"
-        chmod 644 "$NFS_FULLCHAIN" "$NFS_PRIVKEY"
+        sudo mkdir -p "$NFS_CERT_PATH"
+        sudo cp "$LE_FULLCHAIN" "$NFS_FULLCHAIN"
+        sudo cp "$LE_PRIVKEY" "$NFS_PRIVKEY"
+        sudo chmod 644 "$NFS_FULLCHAIN" "$NFS_PRIVKEY"
         log "Copied updated certs to NFS share"
       else
         log "NFS certs already current"
       fi
 
       if [[ "$LE_FULLCHAIN" -nt "$CANONICAL_FULLCHAIN" || "$LE_PRIVKEY" -nt "$CANONICAL_PRIVKEY" ]]; then
-        cp "$LE_FULLCHAIN" "$CANONICAL_FULLCHAIN"
-        cp "$LE_PRIVKEY" "$CANONICAL_PRIVKEY"
-        chmod 600 "$CANONICAL_FULLCHAIN" "$CANONICAL_PRIVKEY"
+        sudo cp "$LE_FULLCHAIN" "$CANONICAL_FULLCHAIN"
+        sudo cp "$LE_PRIVKEY" "$CANONICAL_PRIVKEY"
+        sudo chmod 600 "$CANONICAL_FULLCHAIN" "$CANONICAL_PRIVKEY"
         log "Updated canonical certs on master"
         CERT_UPDATED=true
       fi
       ;;
     cert_client)
       if [[ "$NFS_FULLCHAIN" -nt "$CANONICAL_FULLCHAIN" || "$NFS_PRIVKEY" -nt "$CANONICAL_PRIVKEY" ]]; then
-        cp "$NFS_FULLCHAIN" "$CANONICAL_FULLCHAIN"
-        cp "$NFS_PRIVKEY" "$CANONICAL_PRIVKEY"
-        chmod 600 "$CANONICAL_FULLCHAIN" "$CANONICAL_PRIVKEY"
+        sudo cp "$NFS_FULLCHAIN" "$CANONICAL_FULLCHAIN"
+        sudo cp "$NFS_PRIVKEY" "$CANONICAL_PRIVKEY"
+        sudo chmod 600 "$CANONICAL_FULLCHAIN" "$CANONICAL_PRIVKEY"
         log "Synced certs from NFS to canonical location"
         CERT_UPDATED=true
       fi
@@ -87,17 +87,17 @@ restart_services() {
   if [[ -d /var/snap/adguard-home ]]; then
     log "Preparing to update AdGuard certs..."
     DST="/var/snap/adguard-home/common"
-    cp "$SRC_FULLCHAIN" "$DST/fullchain.pem"
-    cp "$SRC_PRIVKEY" "$DST/privkey.pem"
-    chmod 600 "$DST/"*.pem
-    chown root:root "$DST/"*.pem
+    sudo cp "$SRC_FULLCHAIN" "$DST/fullchain.pem"
+    sudo cp "$SRC_PRIVKEY" "$DST/privkey.pem"
+    sudo chmod 600 "$DST/"*.pem
+    sudo chown root:root "$DST/"*.pem
     log "Updated AdGuard certs (Snap confinement); no restart needed."
   fi
 
   # Apache
   if command -v apache2 >/dev/null 2>&1 || command -v httpd >/dev/null 2>&1; then
     log "Attempting to reload Apache..."
-    if systemctl reload apache2 || systemctl reload httpd; then
+    if sudo systemctl reload apache2 || sudo systemctl reload httpd; then
       log "Reloaded Apache with updated certs"
     else
       warn "Failed to reload Apache"
@@ -119,7 +119,7 @@ restart_services() {
   # Docker (if TLS-enabled)
   if command -v docker >/dev/null 2>&1 && [[ -f /etc/docker/daemon.json ]] && grep -q 'tlsverify' /etc/docker/daemon.json; then
     log "Attempting to restart Docker..."
-    if systemctl restart docker; then
+    if sudo systemctl restart docker; then
       log "Restarted Docker due to cert update"
     else
       warn "Failed to restart Docker"
