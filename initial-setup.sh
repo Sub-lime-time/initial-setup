@@ -266,7 +266,7 @@ minute=$((1 + $RANDOM % 59))
     sudo sh -c "echo '$minute $hour * * 7   root   $(dirname "$0")/scripts/backup-system.sh' >> /etc/cron.d/backup-system"
 }
 
-download_certs() {
+setup_certs() {
     log "Certificate Setup"
 sleep $LONG_DELAY
     source "/mnt/linux/scripts/manage-certs.sh"
@@ -365,7 +365,7 @@ main() {
     check_nfs_share
     setup_rsyslog
     setup_cron
-    download_certs
+    setup_certs
     setup_postfix
     setup_zsh
     
