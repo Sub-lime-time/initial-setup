@@ -9,9 +9,9 @@ set -euo pipefail
 # Logging setup
 LOG_FILE="/var/log/manage-certs.log"
 sudo mkdir -p "$(dirname "$LOG_FILE")"
-log()   { echo -e "\033[1;32m[INFO]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | tee -a "$LOG_FILE"; }
-warn()  { echo -e "\033[1;33m[WARN]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | tee -a "$LOG_FILE"; }
-error() { echo -e "\033[1;31m[ERROR]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | tee -a "$LOG_FILE"; exit 1; }
+log()   { echo -e "\033[1;32m[INFO]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | sudo tee -a "$LOG_FILE"; }
+warn()  { echo -e "\033[1;33m[WARN]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | sudotee -a "$LOG_FILE"; }
+error() { echo -e "\033[1;31m[ERROR]\033[0m $(date '+%F %T') [$HOSTNAME] $*" | sudotee -a "$LOG_FILE"; exit 1; }
 
 HOSTNAME=$(hostname -f)
 DOMAIN=$(echo "$HOSTNAME" | cut -d. -f2-)
