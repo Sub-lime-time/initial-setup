@@ -344,7 +344,7 @@ wait_for_1password_account_add() {
 wait_for_1password_signin() {
     if command -v op &> /dev/null; then
         log "Signing in to 1Password CLI to enable secret access."
-        eval "$(op signin)"
+        eval "$(op signin --account The Family)"
         # Check if sign-in was successful
         if op account get &> /dev/null; then
             log "1Password CLI sign-in successful. Continuing setup."
