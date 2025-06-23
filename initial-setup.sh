@@ -231,8 +231,8 @@ setup_ssh_hardening() {
     # Disable password authentication
     sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
     sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
-    log "SSH password authentication disabled. Restarting SSH service..."
-    sudo systemctl restart sshd
+    log "SSH password authentication disabled."
+    warn "SSH service restart deferred until reboot to avoid disconnecting your SSH session."
     log "SSH hardening complete."
 }
 
