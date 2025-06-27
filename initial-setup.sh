@@ -238,7 +238,7 @@ setup_ssh_hardening() {
 
 check_nfs_share() {
 sleep $LONG_DELAY
-    FILE="$(dirname "$0")/scripts/setup_postfix_v2.sh"
+    FILE="$(dirname "$0")/scripts/setup_postfix.sh"
 if [ ! -f "$FILE" ]; then
        error "Required script file not found: $FILE"
     fi
@@ -247,7 +247,7 @@ if [ ! -f "$FILE" ]; then
 setup_rsyslog() {
     log "Setup rsyslog"
 sleep $SHORT_DELAY
-    sudo cp "$(dirname "$0")/configs/rsyslog.d/"* /etc/rsyslog.d
+    sudo cp "$(dirname "$0")/configs/etcrsyslog.d/"* /etc/rsyslog.d
 sudo chmod 644 /etc/rsyslog.d/*
 sudo systemctl restart rsyslog
 }
