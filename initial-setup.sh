@@ -15,42 +15,6 @@ log() { echo -e "\033[1;32m[INFO]\033[0m $*"; }
 warn() { echo -e "\033[1;33m[WARN]\033[0m $*"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $*"; exit 1; }
 
-set_hostname() {
-    log "Setting Hostname..."
-    current_hostname=$(hostname)
-domain_name=$(grep DOMAINNAME /run/systemd/netif/leases/* 2>/dev/null | awk -F= '{print $2}')
-if [[ -n "$domain_name" ]]; then
-        # Only append domain if not already present
-        if [[ "$current_hostname" == *.$domain_name ]]; then
-            fqdn="$current_hostname"
-        else
-    fqdn="${current_hostname}.${domain_name}"
-        fi
-else
-        warn "No domain name detected from DHCP."
-    fqdn="${current_hostname}"
-    read -p "Enter fqdn :" fqdn
-fi
-    log "Current Hostname : $current_hostname"
-    log "FQDN : $fqdn"
-    if [[ $current_hostname != "$fqdn" ]]; then
-    read -r -p "Change Hostname to '$fqdn'? [Y/n] " input
-    case $input in
-            [yY][eE][sS]|[yY]|"") ;;
-            [nN][oO]|[nN]) log "Hostname change skipped."; return ;;
-            *) warn "Invalid input. Skipping hostname change."; return ;;
-        esac
-        log "Updating hostname to $fqdn..."
-            sudo hostnamectl set-hostname "$fqdn"
-            short_hostname=$(echo "$fqdn" | cut -d. -f1)
-        log "Updating /etc/hosts..."
-            sudo sed -i "s/^127\.0\.1\.1.*/127.0.1.1 $fqdn $short_hostname/" /etc/hosts
-        log "Hostname successfully updated to $fqdn"
-    else
-        log "Hostname already set to $fqdn. Skipping."
-    fi
-}
-
 update_bashrc() {
     log "Updating BASH"
 sleep $SHORT_DELAY
@@ -58,6 +22,38 @@ sleep $SHORT_DELAY
         echo "export PATH=\$PATH:$(dirname "$0")/scripts" >> ~/.bashrc
 fi
 source ~/.bashrc
+}
+
+setup_hosts_file() {
+    log "Setting up /etc/hosts entries..."
+    
+    # Backup current hosts file
+    sudo cp /etc/hosts /etc/hosts.backup.$(date +%Y%m%d_%H%M%S)
+    
+    # Get current hostname
+    current_hostname=$(hostname)
+    domain_name="local"  # or your preferred domain
+    fqdn="${current_hostname}.${domain_name}"
+    
+    # Get the primary LAN IP using default gateway
+    default_gateway=$(ip route | grep default | awk '{print $3}')
+    if [[ -n "$default_gateway" ]]; then
+        lan_ip=$(ip route get "$default_gateway" | awk '{print $7; exit}')
+    else
+        lan_ip=""
+    fi
+    
+    if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
+        # Remove any existing entry for this IP
+        sudo sed -i "/^$lan_ip[[:space:]]/d" /etc/hosts
+        
+        # Add new entry with LAN IP
+        echo "$lan_ip $fqdn $current_hostname" | sudo tee -a /etc/hosts
+        
+        log "Updated /etc/hosts: $lan_ip $fqdn $current_hostname"
+    else
+        warn "Could not determine LAN IP. Skipping /etc/hosts update."
+    fi
 }
 
 set_timezone() {
@@ -246,40 +242,66 @@ if [ ! -f "$FILE" ]; then
 
 setup_rsyslog() {
     log "Setup rsyslog"
-sleep $SHORT_DELAY
-    sudo cp "$(dirname "$0")/configs/etcrsyslog.d/"* /etc/rsyslog.d
-sudo chmod 644 /etc/rsyslog.d/*
-sudo systemctl restart rsyslog
+    sleep $SHORT_DELAY
+    
+    if [ -d "$(dirname "$0")/configs/etc/rsyslog.d" ]; then
+        sudo cp "$(dirname "$0")/configs/etc/rsyslog.d/"* /etc/rsyslog.d/
+        sudo chmod 644 /etc/rsyslog.d/*
+        sudo systemctl restart rsyslog
+        log "Rsyslog configuration updated successfully."
+    else
+        warn "Rsyslog config directory not found in configs/etc/rsyslog.d/. Skipping rsyslog setup."
+    fi
 }
 
 setup_cron() {
     log "Populating CRON"
-sleep $LONG_DELAY
-    sudo bash -c "source /mnt/linux/scripts/sync-distributed.sh"
-    sudo cp -v "$(dirname "$0")/configs/cron/"* /etc/cron.d
-sudo chmod 644 /etc/cron.d/*
-    # Remove any previous backup-system.sh lines before adding a new one (idempotency)
-    sudo sed -i '/backup-system.sh/d' /etc/cron.d/backup-system
-    # Randomize the backup time and update the cron job
-hour=$((1 + $RANDOM % 6))
-minute=$((1 + $RANDOM % 59))
-    sudo sh -c "echo '$minute $hour * * 7   root   $(dirname "$0")/scripts/backup-system.sh' >> /etc/cron.d/backup-system"
+    sleep $LONG_DELAY
+    
+    # Check if sync-distributed.sh exists before sourcing
+    if [ -f "/mnt/linux/scripts/sync-distributed.sh" ]; then
+        sudo bash -c "source /mnt/linux/scripts/sync-distributed.sh"
+    else
+        warn "sync-distributed.sh not found at /mnt/linux/scripts/. Skipping sync setup."
+    fi
+    
+    if [ -d "$(dirname "$0")/configs/cron" ]; then
+        sudo cp -v "$(dirname "$0")/configs/cron/"* /etc/cron.d/
+        sudo chmod 644 /etc/cron.d/*
+        # Remove any previous backup-system.sh lines before adding a new one (idempotency)
+        sudo sed -i '/backup-system.sh/d' /etc/cron.d/backup-system
+        # Randomize the backup time and update the cron job
+        hour=$((1 + $RANDOM % 6))
+        minute=$((1 + $RANDOM % 59))
+        sudo sh -c "echo '$minute $hour * * 7   root   $(dirname "$0")/scripts/backup-system.sh' >> /etc/cron.d/backup-system"
+        log "Cron jobs configured successfully."
+    else
+        warn "Cron config directory not found in configs/cron/. Skipping cron setup."
+    fi
 }
 
 setup_certs() {
     log "Certificate Setup"
-sleep $LONG_DELAY
-    source "/mnt/linux/scripts/manage-certs.sh"
+    sleep $LONG_DELAY
+    
+    if [ -f "/mnt/linux/scripts/manage-certs.sh" ]; then
+        source "/mnt/linux/scripts/manage-certs.sh"
+        log "Certificate management script executed successfully."
+    else
+        warn "manage-certs.sh not found at /mnt/linux/scripts/. Skipping certificate setup."
+    fi
 }
 
 setup_postfix() {
     log "Setting up Postfix..."
-sleep $SHORT_DELAY
-    if [ -f "$(dirname "$0")/scripts/setup_postfix_v2.sh" ]; then
-        source "$(dirname "$0")/scripts/setup_postfix_v2.sh"
-else
+    sleep $SHORT_DELAY
+    
+    if [ -f "$(dirname "$0")/scripts/setup_postfix.sh" ]; then
+        source "$(dirname "$0")/scripts/setup_postfix.sh"
+        log "Postfix setup script executed successfully."
+    else
         warn "Postfix setup script not found. Skipping..."
-fi
+    fi
 }
 
 setup_zsh() {
@@ -351,8 +373,8 @@ main() {
     install_1password
     wait_for_1password_account_add
     wait_for_1password_signin
-    set_hostname
     update_bashrc
+    setup_hosts_file
     set_timezone
     install_packages
     setup_virtualization_tools
