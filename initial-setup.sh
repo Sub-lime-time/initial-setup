@@ -35,11 +35,16 @@ setup_hosts_file() {
     
     # Get the primary LAN IP using default gateway
     default_gateway=$(ip route | grep default | awk '{print $3}')
+    log "Detected default gateway: $default_gateway"
     if [[ -n "$default_gateway" ]]; then
-        lan_ip=$(ip route get "$default_gateway" | awk '{print $7; exit}')
+        lan_ip=$(ip route get "$default_gateway" | awk '/src/ {for(i=1;i<=NF;i++) if ($i=="src") print $(i+1)}')
+        if [[ -z "$lan_ip" ]]; then
+            lan_ip=$(ip route get "$default_gateway" | awk '{print $7; exit}')
+        fi
     else
         lan_ip=""
     fi
+    log "Detected LAN IP: $lan_ip"
     
     if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
         # Extract subnet (first three octets)
@@ -67,6 +72,9 @@ setup_hosts_file() {
         # Add new entry with LAN IP
         echo "$lan_ip $fqdn $current_hostname" | sudo tee -a /etc/hosts
         log "Updated /etc/hosts: $lan_ip $fqdn $current_hostname"
+        echo "\nCurrent /etc/hosts entry for this IP:" 
+        grep "^${lan_ip}[[:space:]]" /etc/hosts
+        read -p "Does this look correct? Press Enter to continue, or Ctrl+C to abort... "
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
     fi
