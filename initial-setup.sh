@@ -193,13 +193,22 @@ setup_samba() {
         warn "Samba config file not found in configs/etc/samba/. Using default configuration."
     fi
 
-    # Create Samba user 'greg' non-interactively if password is set
-    if [[ -n "${SAMBA_PASSWORD:-}" ]]; then
-        echo -e "${SAMBA_PASSWORD}\n${SAMBA_PASSWORD}" | sudo smbpasswd -a "greg" >/dev/null
-        log "Samba user 'greg' created non-interactively."
+    # Retrieve or generate unique Samba password for this host from 1Password
+    SAMBA_ITEM="samba-$(hostname)"
+    if command -v op &> /dev/null; then
+        if op item get "$SAMBA_ITEM" --vault=Private --fields label=password &>/dev/null; then
+            SAMBA_PASSWORD=$(op read "op://Private/$SAMBA_ITEM/password")
+            log "Samba password for $SAMBA_ITEM retrieved from 1Password."
+        else
+            SAMBA_PASSWORD=$(op generate password --symbols --length=24)
+            op item create --category=login --vault=Private --title="$SAMBA_ITEM" username="greg" password="$SAMBA_PASSWORD" > /dev/null
+            log "Generated and stored new Samba password for $SAMBA_ITEM in 1Password."
+        fi
     else
-        warn "Samba password not set; skipping user creation."
+        read -s -p "Enter Samba password for user 'greg': " SAMBA_PASSWORD
+        echo
     fi
+    export SAMBA_PASSWORD
 
     # Enable and start Samba services
     log "Enabling and starting Samba services..."
