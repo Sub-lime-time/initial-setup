@@ -67,14 +67,20 @@ install_autosuggestions() {
 }
 
 clone_dotfiles() {
+    # Ensure GitHub is in known_hosts to avoid interactive prompt
+    mkdir -p "$HOME/.ssh"
+    ssh-keyscan github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null
+
     if yadm list | grep -q ".zshrc"; then
         echo "[OK] Dotfiles already managed by yadm."
     else
-        # Start ssh-agent and add GitHub key if it exists
+        # Start ssh-agent and add GitHub key if it exists and not already running
         if [ -f "$HOME/.ssh/github" ]; then
-            echo "[INFO] Starting ssh-agent and adding GitHub key for yadm clone..."
-            eval "$(ssh-agent -s)"
-            ssh-add "$HOME/.ssh/github"
+            if ! pgrep -u "$USER" ssh-agent > /dev/null; then
+                echo "[INFO] Starting ssh-agent for yadm clone..."
+                eval "$(ssh-agent -s)"
+            fi
+            ssh-add "$HOME/.ssh/github" 2>/dev/null || true
             DOTFILES_REPO_SSH="git@github.com:Sub-Lime-Time/dotfiles.git"
             echo "[INFO] Cloning dotfiles with yadm (SSH)..."
             yadm clone -f "$DOTFILES_REPO_SSH" || {
