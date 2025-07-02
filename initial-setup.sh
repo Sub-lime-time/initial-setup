@@ -277,7 +277,7 @@ setup_cron() {
     
     # Check if sync-distributed.sh exists before executing
     if [ -f "/mnt/linux/scripts/sync-distributed.sh" ]; then
-        sudo bash -c "/mnt/linux/scripts/sync-distributed.sh --debug"
+        sudo bash -c "/mnt/linux/scripts/sync-distributed.sh"
         log "sync-distributed.sh completed with exit code $?"
     else
         warn "sync-distributed.sh not found at /mnt/linux/scripts/. Skipping sync setup."
