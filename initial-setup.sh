@@ -200,8 +200,8 @@ setup_samba() {
             SAMBA_PASSWORD=$(op read "op://Private/$SAMBA_ITEM/password")
             log "Samba password for $SAMBA_ITEM retrieved from 1Password."
         else
-            SAMBA_PASSWORD=$(op generate password --symbols --length=24)
-            op item create --category=login --vault=Private --title="$SAMBA_ITEM" username="greg" password="$SAMBA_PASSWORD" > /dev/null
+            op item create --category=login --vault=Private --title="$SAMBA_ITEM" username="greg" --generate-password > /dev/null
+            SAMBA_PASSWORD=$(op read "op://Private/$SAMBA_ITEM/password")
             log "Generated and stored new Samba password for $SAMBA_ITEM in 1Password."
         fi
     else
