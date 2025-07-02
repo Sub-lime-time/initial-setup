@@ -71,27 +71,32 @@ clone_dotfiles() {
     mkdir -p "$HOME/.ssh"
     ssh-keyscan github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null
 
+    # Only clone if yadm is not already managing dotfiles
     if yadm list | grep -q ".zshrc"; then
-        echo "[OK] Dotfiles already managed by yadm."
-    else
-        # Start ssh-agent and add GitHub key if it exists and not already running
-        if [ -f "$HOME/.ssh/github" ]; then
-            if ! pgrep -u "$USER" ssh-agent > /dev/null; then
-                echo "[INFO] Starting ssh-agent for yadm clone..."
-                eval "$(ssh-agent -s)"
-            fi
-            ssh-add "$HOME/.ssh/github" 2>/dev/null || true
-            DOTFILES_REPO_SSH="git@github.com:Sub-Lime-Time/dotfiles.git"
-            echo "[INFO] Cloning dotfiles with yadm (SSH)..."
-            yadm clone -f "$DOTFILES_REPO_SSH" || {
-                echo "[ERROR] Failed to clone dotfiles via SSH."; exit 1;
-            }
-        else
-            echo "[INFO] GitHub SSH key not found, cloning dotfiles with HTTPS..."
-            yadm clone -f "$DOTFILES_REPO" || {
-                echo "[ERROR] Failed to clone dotfiles."; exit 1;
-            }
+        echo "[OK] Dotfiles already managed by yadm. Skipping clone."
+        return
+    fi
+
+    # Start ssh-agent and add GitHub key if it exists and not already running
+    if [ -f "$HOME/.ssh/github" ]; then
+        if ! pgrep -u "$USER" ssh-agent > /dev/null; then
+            echo "[INFO] Starting ssh-agent for yadm clone..."
+            eval "$(ssh-agent -s)"
         fi
+        ssh-add "$HOME/.ssh/github" 2>/dev/null || true
+        DOTFILES_REPO_SSH="git@github.com:Sub-Lime-Time/dotfiles.git"
+        echo "[INFO] Cloning dotfiles with yadm (SSH)..."
+        yadm clone "$DOTFILES_REPO_SSH" || {
+            echo "[WARN] SSH clone failed, falling back to HTTPS..."
+            yadm clone "$DOTFILES_REPO" || {
+                echo "[ERROR] Failed to clone dotfiles via both SSH and HTTPS."; exit 1;
+            }
+        }
+    else
+        echo "[INFO] GitHub SSH key not found, cloning dotfiles with HTTPS..."
+        yadm clone "$DOTFILES_REPO" || {
+            echo "[ERROR] Failed to clone dotfiles via HTTPS."; exit 1;
+        }
     fi
 }
 
