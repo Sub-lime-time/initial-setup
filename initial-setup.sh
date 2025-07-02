@@ -193,17 +193,13 @@ setup_samba() {
         warn "Samba config file not found in configs/etc/samba/. Using default configuration."
     fi
 
-    # Create Samba user if needed
-    read -r -p "Create Samba user? [y/N] " input
-    case $input in
-        [yY][eE][sS]|[yY])
-            read -p "Enter Samba username: " samba_user
-            sudo smbpasswd -a "$samba_user"
-            ;;
-        *)
-            log "Samba user creation skipped."
-            ;;
-    esac
+    # Create Samba user 'greg' non-interactively if password is set
+    if [[ -n "${SAMBA_PASSWORD:-}" ]]; then
+        echo -e "${SAMBA_PASSWORD}\n${SAMBA_PASSWORD}" | sudo smbpasswd -a "greg" >/dev/null
+        log "Samba user 'greg' created non-interactively."
+    else
+        warn "Samba password not set; skipping user creation."
+    fi
 
     # Enable and start Samba services
     log "Enabling and starting Samba services..."
