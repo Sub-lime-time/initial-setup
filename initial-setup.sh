@@ -47,8 +47,12 @@ setup_hosts_file() {
     log "Detected LAN IP: $lan_ip"
     
     if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
-        # Extract subnet (first three octets)
-        subnet=$(echo "$lan_ip" | awk -F. '{print $1 "." $2 "." $3}')
+        # Extract subnet for mapping
+        if [[ "$lan_ip" =~ ^10\.([0-9]+)\. ]]; then
+            subnet="10.${BASH_REMATCH[1]}"
+        else
+            subnet=$(echo "$lan_ip" | awk -F. '{print $1 "." $2 "." $3}')
+        fi
         # Subnet to domain mapping
         case "$subnet" in
             10.7)
