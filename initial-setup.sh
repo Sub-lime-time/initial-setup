@@ -45,7 +45,7 @@ setup_hosts_file() {
     
     if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
         # Remove any existing entry for this IP
-        sudo sed -i "/^$lan_ip[[:space:]]/d" /etc/hosts
+        sudo sed -i "/^${lan_ip}[[:space:]]/d" /etc/hosts
         
         # Add new entry with LAN IP
         echo "$lan_ip $fqdn $current_hostname" | sudo tee -a /etc/hosts
@@ -259,9 +259,9 @@ setup_cron() {
     log "Populating CRON"
     sleep $LONG_DELAY
     
-    # Check if sync-distributed.sh exists before sourcing
+    # Check if sync-distributed.sh exists before executing
     if [ -f "/mnt/linux/scripts/sync-distributed.sh" ]; then
-        sudo bash -c "source /mnt/linux/scripts/sync-distributed.sh"
+        sudo bash -c "/mnt/linux/scripts/sync-distributed.sh --debug"
         log "sync-distributed.sh completed with exit code $?"
     else
         warn "sync-distributed.sh not found at /mnt/linux/scripts/. Skipping sync setup."
