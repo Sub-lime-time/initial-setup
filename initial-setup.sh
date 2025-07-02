@@ -84,10 +84,14 @@ setup_hosts_file() {
             echo "127.0.1.1 $fqdn $current_hostname" | sudo tee -a /etc/hosts
             log "Added 127.0.1.1 entry: 127.0.1.1 $fqdn $current_hostname"
         fi
+        echo "================================================"
         echo "\nCurrent /etc/hosts entry for this IP:" 
         grep "^${lan_ip}[[:space:]]" /etc/hosts
+        echo "================================================"
         echo "Current /etc/hosts entry for 127.0.1.1:" 
+        echo "================================================"
         grep "^127.0.1.1[[:space:]]" /etc/hosts
+        echo "================================================"
         read -p "Does this look correct? Press Enter to continue, or Ctrl+C to abort... "
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
