@@ -92,7 +92,8 @@ setup_hosts_file() {
         echo "================================================"
         grep "^127.0.1.1[[:space:]]" /etc/hosts
         echo "================================================"
-        read -p "Does this look correct? Press Enter to continue, or Ctrl+C to abort... "
+        echo "Press Enter to continue, or Ctrl+C to abort..."
+        read -p "Does this look correct?"
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
     fi
