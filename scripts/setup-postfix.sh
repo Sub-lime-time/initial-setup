@@ -21,11 +21,42 @@ main() {
 
     # --- Extract FQDN, SITE_ID, DOMAIN ---
     FQDN=$(hostname -f)
+    if [[ "$FQDN" != *.* ]]; then
+        # FQDN is not fully qualified, try to construct it from LAN IP and mapping
+        lan_ip=$(ip route get 1 | awk '/src/ {for(i=1;i<=NF;i++) if ($i=="src") print $(i+1)}')
+        if [[ -z "$lan_ip" ]]; then
+            lan_ip=$(ip route get 1 | awk '{print $7; exit}')
+        fi
+        if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
+            if [[ "$lan_ip" =~ ^10\.([0-9]+)\. ]]; then
+                subnet="10.${BASH_REMATCH[1]}"
+            else
+                subnet=$(echo "$lan_ip" | awk -F. '{print $1 "." $2 "." $3}')
+            fi
+            case "$subnet" in
+                10.7)
+                    domain_name="hq.802ski.com" ;;
+                10.8)
+                    domain_name="er.802ski.com" ;;
+                192.168.50)
+                    domain_name="la.ramalamba.com" ;;
+                192.168.11)
+                    domain_name="nj.zoinks.us" ;;
+                192.168.7)
+                    domain_name="hq.802ski.com" ;;
+                192.168.8)
+                    domain_name="er.802ski.com" ;;
+                *)
+                    domain_name="local" ;;
+            esac
+            current_hostname=$(hostname)
+            FQDN="${current_hostname}.${domain_name}"
+        fi
+    fi
     SITE_ID=$(echo "$FQDN" | awk -F. '{print $2}')
-    DOMAIN=$(hostname -d | rev | cut -d'.' -f1,2 | rev)
+    DOMAIN=$(echo "$FQDN" | awk -F. '{print $(NF-1)"."$NF}')
     SHORT_HOSTNAME=$(hostname)
-
-    if [[ -z "$SITE_ID" || -z "$DOMAIN" ]]; then
+    if [[ -z "$SITE_ID" || -z "$DOMAIN" || "$FQDN" != *.* ]]; then
         log ERROR "Unable to extract site_id or domain from FQDN ($FQDN)"
         exit 1
     fi

@@ -76,8 +76,18 @@ setup_hosts_file() {
         # Add new entry with LAN IP
         echo "$lan_ip $fqdn $current_hostname" | sudo tee -a /etc/hosts
         log "Updated /etc/hosts: $lan_ip $fqdn $current_hostname"
+        # Ensure 127.0.1.1 line is present and correct
+        if grep -q '^127.0.1.1' /etc/hosts; then
+            sudo sed -i "s|^127.0.1.1.*|127.0.1.1 $fqdn $current_hostname|" /etc/hosts
+            log "Updated 127.0.1.1 entry: 127.0.1.1 $fqdn $current_hostname"
+        else
+            echo "127.0.1.1 $fqdn $current_hostname" | sudo tee -a /etc/hosts
+            log "Added 127.0.1.1 entry: 127.0.1.1 $fqdn $current_hostname"
+        fi
         echo "\nCurrent /etc/hosts entry for this IP:" 
         grep "^${lan_ip}[[:space:]]" /etc/hosts
+        echo "Current /etc/hosts entry for 127.0.1.1:" 
+        grep "^127.0.1.1[[:space:]]" /etc/hosts
         read -p "Does this look correct? Press Enter to continue, or Ctrl+C to abort... "
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
@@ -326,8 +336,8 @@ setup_postfix() {
     log "Setting up Postfix..."
     sleep $SHORT_DELAY
     
-    if [ -f "$(dirname "$0")/scripts/setup_postfix.sh" ]; then
-        source "$(dirname "$0")/scripts/setup_postfix.sh"
+    if [ -f "$(dirname "$0")/scripts/setup-postfix.sh" ]; then
+        source "$(dirname "$0")/scripts/setup-postfix.sh"
         log "Postfix setup script executed successfully."
     else
         warn "Postfix setup script not found. Skipping..."
