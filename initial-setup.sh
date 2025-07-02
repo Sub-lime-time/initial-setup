@@ -277,10 +277,9 @@ setup_ssh_hardening() {
 }
 
 check_nfs_share() {
-sleep $LONG_DELAY
-    FILE="$(dirname "$0")/scripts/setup_postfix.sh"
-if [ ! -f "$FILE" ]; then
-       error "Required script file not found: $FILE"
+    sleep $LONG_DELAY
+    if [ ! -d /mnt/linux/scripts ] || [ ! -r /mnt/linux/scripts ]; then
+        error "/mnt/linux/scripts is not accessible. Please ensure the NFS share is mounted and available."
     fi
 }
 
