@@ -32,8 +32,6 @@ setup_hosts_file() {
     
     # Get current hostname
     current_hostname=$(hostname)
-    domain_name="local"  # or your preferred domain
-    fqdn="${current_hostname}.${domain_name}"
     
     # Get the primary LAN IP using default gateway
     default_gateway=$(ip route | grep default | awk '{print $3}')
@@ -44,12 +42,30 @@ setup_hosts_file() {
     fi
     
     if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
+        # Extract subnet (first three octets)
+        subnet=$(echo "$lan_ip" | awk -F. '{print $1 "." $2 "." $3}')
+        # Subnet to domain mapping
+        case "$subnet" in
+            10.7)
+                domain_name="hq.802ski.com" ;;
+            10.8)
+                domain_name="er.802ski.com" ;;
+            192.168.50)
+                domain_name="la.ramalamba.com" ;;
+            192.168.11)
+                domain_name="nj.zoinks.us" ;;
+            192.168.7)
+                domain_name="hq.802ski.com" ;;
+            192.168.8)
+                domain_name="er.802ski.com" ;;
+            *)
+                domain_name="local" ;;
+        esac
+        fqdn="${current_hostname}.${domain_name}"
         # Remove any existing entry for this IP
         sudo sed -i "/^${lan_ip}[[:space:]]/d" /etc/hosts
-        
         # Add new entry with LAN IP
         echo "$lan_ip $fqdn $current_hostname" | sudo tee -a /etc/hosts
-        
         log "Updated /etc/hosts: $lan_ip $fqdn $current_hostname"
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
