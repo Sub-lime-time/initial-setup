@@ -68,9 +68,10 @@ install_packages() {
 sleep $SHORT_DELAY
     sudo apt-get update && sudo NEEDRESTART_MODE=a apt-get dist-upgrade -y
     sudo NEEDRESTART_MODE=a apt-get -y install \
-    nfs-common ntp cifs-utils \
+    nfs-common ntp cifs-utils ncdu lsof strace sysstat iotop \
+    mtr nmap dnsutils jq \
     smbclient apt-transport-https ca-certificates curl software-properties-common \
-        micro net-tools smartmontools || error "Error installing base packages. Exiting."
+    micro net-tools smartmontools || error "Error installing base packages. Exiting."
 sleep $SHORT_DELAY
 echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
@@ -261,6 +262,7 @@ setup_cron() {
     # Check if sync-distributed.sh exists before sourcing
     if [ -f "/mnt/linux/scripts/sync-distributed.sh" ]; then
         sudo bash -c "source /mnt/linux/scripts/sync-distributed.sh"
+        log "sync-distributed.sh completed with exit code $?"
     else
         warn "sync-distributed.sh not found at /mnt/linux/scripts/. Skipping sync setup."
     fi
