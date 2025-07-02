@@ -396,11 +396,11 @@ wait_for_1password_signin() {
 }
 
 main() {
+    setup_hosts_file
     install_1password
     wait_for_1password_account_add
     wait_for_1password_signin
     update_bashrc
-    setup_hosts_file
     set_timezone
     install_packages
     setup_virtualization_tools
@@ -416,7 +416,6 @@ main() {
     setup_certs
     setup_postfix
     setup_zsh
-    
     reboot_prompt
 }
 
