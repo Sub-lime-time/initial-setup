@@ -71,6 +71,16 @@ clone_dotfiles() {
     mkdir -p "$HOME/.ssh"
     ssh-keyscan github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null
 
+    # Start ssh-agent if not already running, and add key
+    if [ -z "$SSH_AUTH_SOCK" ] || ! ssh-add -l >/dev/null 2>&1; then
+        eval "$(ssh-agent -s)"
+        ssh-add "$HOME/.ssh/github"
+        export SSH_AUTH_SOCK SSH_AGENT_PID
+        echo "[INFO] ssh-agent started and key added."
+    else
+        echo "[INFO] ssh-agent already running and key available."
+    fi
+
     # Only clone if yadm is not already managing dotfiles
     if yadm list | grep -q ".zshrc"; then
         echo "[OK] Dotfiles already managed by yadm. Skipping clone."
@@ -79,12 +89,6 @@ clone_dotfiles() {
 
     # Start ssh-agent and add GitHub key if it exists and not already running
     if [ -f "$HOME/.ssh/github" ]; then
-        if ! pgrep -u "$USER" ssh-agent > /dev/null; then
-            echo "[INFO] Starting ssh-agent for yadm clone..."
-            eval "$(ssh-agent -s)"
-        fi
-        ssh-add "$HOME/.ssh/github" 2>/dev/null || true
-        DOTFILES_REPO_SSH="git@github.com:Sub-Lime-Time/dotfiles.git"
         echo "[INFO] Cloning dotfiles with yadm (SSH)..."
         yadm clone "$DOTFILES_REPO_SSH" || {
             echo "[WARN] SSH clone failed, falling back to HTTPS..."
