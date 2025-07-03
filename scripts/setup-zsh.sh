@@ -1,5 +1,4 @@
 #! /bin/bash
-
 set -e
 
 # Cross-platform zsh/yadm/oh-my-zsh setup script
@@ -26,6 +25,7 @@ OH_MY_ZSH_SH="$OH_MY_ZSH_DIR/oh-my-zsh.sh"
 ZSH_CUSTOM="${ZSH_CUSTOM:-$OH_MY_ZSH_DIR/custom}"
 AUTO_SUGGESTIONS="$ZSH_CUSTOM/plugins/zsh-autosuggestions"
 DOTFILES_REPO="https://github.com/Sub-Lime-Time/dotfiles.git"
+DOTFILES_REPO_SSH="git@github.com:Sub-lime-time/dotfiles.git"
 
 install_zsh() {
     if ! command -v zsh &>/dev/null; then
@@ -66,47 +66,96 @@ install_autosuggestions() {
     fi
 }
 
-clone_dotfiles() {
-    # Ensure GitHub is in known_hosts to avoid interactive prompt
+setup_ssh_key() {
     mkdir -p "$HOME/.ssh"
-    ssh-keyscan github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null
+    chmod 700 "$HOME/.ssh"
 
-    # Start ssh-agent if not already running, and add key
-    if [ -z "$SSH_AUTH_SOCK" ] || ! ssh-add -l >/dev/null 2>&1; then
-        eval "$(ssh-agent -s)"
-        ssh-add "$HOME/.ssh/github"
-        export SSH_AUTH_SOCK SSH_AGENT_PID
-        echo "[INFO] ssh-agent started and key added."
-    else
-        echo "[INFO] ssh-agent already running and key available."
+    # Check if 1Password CLI is signed in before fetching keys
+    if command -v op &>/dev/null; then
+        if ! op account get &>/dev/null; then
+            echo "[INFO] 1Password CLI not signed in. Running 'op signin'..."
+            eval "$(op signin)"
+        fi
     fi
 
+    # Fetch Homelab private key from 1Password if not present
+    if [ ! -f "$HOME/.ssh/homelab" ]; then
+        if command -v op &>/dev/null; then
+            echo "[INFO] Fetching Homelab private key from 1Password..."
+            op read "op://Private/id_ed25519_homelab/private key" > "$HOME/.ssh/homelab"
+            chmod 600 "$HOME/.ssh/homelab"
+        else
+            echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/homelab."
+            exit 1
+        fi
+    fi
+
+    # Fetch Homelab public key from 1Password if not present
+    if [ ! -f "$HOME/.ssh/homelab.pub" ]; then
+        if command -v op &>/dev/null; then
+            echo "[INFO] Fetching Homelab public key from 1Password..."
+            op read "op://Private/id_ed25519_homelab/public key" > "$HOME/.ssh/homelab.pub"
+            chmod 644 "$HOME/.ssh/homelab.pub"
+        else
+            echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/homelab.pub."
+            exit 1
+        fi
+    fi
+
+    # Add GitHub to known_hosts if not already present
+    if ! grep -q github.com "$HOME/.ssh/known_hosts" 2>/dev/null; then
+        ssh-keyscan github.com >> "$HOME/.ssh/known_hosts"
+    fi
+
+    # Optionally add SSH config for GitHub
+    if ! grep -q "Host github.com" "$HOME/.ssh/config" 2>/dev/null; then
+        cat <<EOF >> "$HOME/.ssh/config"
+Host github.com
+    User git
+    IdentityFile ~/.ssh/homelab
+    IdentitiesOnly yes
+    ForwardAgent yes
+EOF
+        chmod 600 "$HOME/.ssh/config"
+    fi
+}
+
+clone_dotfiles() {
     # Only clone if yadm is not already managing dotfiles
     if yadm list | grep -q ".zshrc"; then
         echo "[OK] Dotfiles already managed by yadm. Skipping clone."
         return
     fi
 
-    # Start ssh-agent and add GitHub key if it exists and not already running
-    if [ -f "$HOME/.ssh/github" ]; then
+    if [ -f "$HOME/.ssh/homelab" ]; then
         echo "[INFO] Cloning dotfiles with yadm (SSH)..."
-        yadm clone "$DOTFILES_REPO_SSH" || {
+        if yadm clone "$DOTFILES_REPO_SSH"; then
+            echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+            yadm checkout --force
+        else
             echo "[WARN] SSH clone failed, falling back to HTTPS..."
-            yadm clone "$DOTFILES_REPO" || {
+            if yadm clone "$DOTFILES_REPO"; then
+                echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+                yadm checkout --force
+            else
                 echo "[ERROR] Failed to clone dotfiles via both SSH and HTTPS."; exit 1;
-            }
-        }
+            fi
+        fi
     else
-        echo "[INFO] GitHub SSH key not found, cloning dotfiles with HTTPS..."
-        yadm clone "$DOTFILES_REPO" || {
+        echo "[INFO] Homelab SSH key not found, cloning dotfiles with HTTPS..."
+        if yadm clone "$DOTFILES_REPO"; then
+            echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+            yadm checkout --force
+        else
             echo "[ERROR] Failed to clone dotfiles via HTTPS."; exit 1;
-        }
+        fi
     fi
 }
 
 main() {
+    setup_ssh_key
     eval "$(ssh-agent -s)"
-    ssh-add ~/.ssh/github
+    ssh-add ~/.ssh/homelab
     install_zsh
     install_yadm
     install_oh_my_zsh
