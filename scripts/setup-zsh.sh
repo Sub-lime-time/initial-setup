@@ -155,7 +155,12 @@ clone_dotfiles() {
 main() {
     setup_ssh_key
     eval "$(ssh-agent -s)"
-    ssh-add ~/.ssh/homelab
+    if [[ -n "${SSH_AUTH_SOCK:-}" ]]; then
+        ssh-add ~/.ssh/homelab
+    else
+        echo "[ERROR] ssh-agent did not start or SSH_AUTH_SOCK is not set."
+        exit 1
+    fi
     install_zsh
     install_yadm
     install_oh_my_zsh
