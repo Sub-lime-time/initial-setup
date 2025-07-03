@@ -227,7 +227,8 @@ setup_github_ssh_key_from_server() {
     log "Fetching GitHub SSH key from 1Password CLI..."
     if command -v op &> /dev/null; then
         # Fetch private key
-        op read "op://Private/id_ed25519_github/private key" > ~/.ssh/github
+        op read "op://Private/id_ed25519_homelab/private key" > ~/.ssh/github
+        
         chmod 600 ~/.ssh/github
         # Write public key
         echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH7vspSV++pdVro1MbLaHuHZFbMWA27DG70iKKtXyLf0" > ~/.ssh/github.pub

@@ -101,6 +101,8 @@ clone_dotfiles() {
 }
 
 main() {
+    eval "$(ssh-agent -s)"
+    ssh-add ~/.ssh/github
     install_zsh
     install_yadm
     install_oh_my_zsh
