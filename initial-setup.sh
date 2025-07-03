@@ -215,6 +215,40 @@ setup_samba() {
     fi
     export SAMBA_PASSWORD
 
+    # Create Samba user 'greg' non-interactively if password is set
+    if [[ -n "${SAMBA_PASSWORD:-}" ]]; then
+        echo -e "${SAMBA_PASSWORD}\n${SAMBA_PASSWORD}" | sudo smbpasswd -a "greg" >/dev/null
+        log "Samba user 'greg' created non-interactively."
+    else
+        warn "Samba password not set; skipping user creation."
+    fi
+
+    # Ensure /opt is shared via Samba for greg
+    SMB_CONF="/etc/samba/smb.conf"
+    SHARE_BLOCK="
+[opt]
+   path = /opt
+   valid users = greg
+   read only = no
+   browsable = yes
+   writable = yes
+   create mask = 0664
+   directory mask = 0775
+   force user = greg
+   force group = greg
+   comment = /opt shared for greg
+"
+    if ! grep -q '^\[opt\]' "$SMB_CONF"; then
+        echo "$SHARE_BLOCK" | sudo tee -a "$SMB_CONF"
+        log "Added /opt Samba share for greg."
+    else
+        log "/opt Samba share already present."
+    fi
+
+    # Ensure greg has write access to /opt
+    sudo chown -R greg:greg /opt
+    sudo chmod -R 775 /opt
+
     # Enable and start Samba services
     log "Enabling and starting Samba services..."
     sudo systemctl enable smbd nmbd
