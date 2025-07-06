@@ -357,7 +357,7 @@ setup_cron() {
         # Randomize the backup time and update the cron job
         hour=$((1 + $RANDOM % 6))
         minute=$((1 + $RANDOM % 59))
-        sudo sh -c "echo '$minute $hour * * 7   root   $(dirname "$0")/scripts/backup-system.sh' >> /etc/cron.d/backup-system"
+        sudo sh -c "echo '$minute $hour * * 7   root   /mnt/linux/scripts/backup-system.sh' >> /etc/cron.d/backup-system"
         log "Cron jobs configured successfully."
     else
         warn "Cron config directory not found in configs/cron/. Skipping cron setup."
