@@ -215,7 +215,7 @@ setup_samba() {
             log "Samba password for $SAMBA_ITEM retrieved from 1Password."
         else
             op item create --category=login --vault=Private --title="$SAMBA_ITEM" \
-						username[username]="greg" \
+						"username=greg" \
 						--generate-password \
 						--tags "samba,homelab" \
 						> /dev/null
