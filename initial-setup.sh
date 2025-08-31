@@ -7,6 +7,12 @@
 
 set -euo pipefail
 
+# Source common helpers if available
+if [ -f "$(dirname "$0")/scripts/common.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$(dirname "$0")/scripts/common.sh"
+fi
+
 
 SHORT_DELAY=2
 LONG_DELAY=5
@@ -14,6 +20,8 @@ LONG_DELAY=5
 log() { echo -e "\033[1;32m[INFO]\033[0m $*"; }
 warn() { echo -e "\033[1;33m[WARN]\033[0m $*"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $*"; exit 1; }
+
+# Note: apt_retry is implemented in scripts/common.sh and is sourced above when available.
 
 update_bashrc() {
     log "Updating BASH"
@@ -109,15 +117,16 @@ sudo timedatectl set-timezone America/New_York
 install_packages() {
     log "Installing base packages..."
 sleep $SHORT_DELAY
-    sudo apt-get update && sudo NEEDRESTART_MODE=a apt-get dist-upgrade -y
-    sudo NEEDRESTART_MODE=a apt-get -y install \
+    apt_retry sudo apt-get update
+    apt_retry sudo NEEDRESTART_MODE=a apt-get dist-upgrade -y
+    apt_retry sudo NEEDRESTART_MODE=a apt-get -y install \
     nfs-common ntp cifs-utils ncdu lsof strace sysstat iotop \
     mtr nmap dnsutils jq \
     smbclient apt-transport-https ca-certificates curl software-properties-common \
     micro net-tools smartmontools || error "Error installing base packages. Exiting."
 sleep $SHORT_DELAY
 echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
+    apt_retry sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
 }
 
 install_1password() {
@@ -146,10 +155,10 @@ setup_virtualization_tools() {
 virt=$(systemd-detect-virt)
 if [ "$virt" = "microsoft" ]; then
         log "Detected Microsoft Hyper-V. Installing virtualization tools..."
-        sudo NEEDRESTART_MODE=a apt-get -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
+    apt_retry sudo NEEDRESTART_MODE=a apt-get -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
 elif [ "$virt" = "kvmq" ]; then
         log "Detected KVM/QEMU. Installing virtualization tools..."
-        sudo NEEDRESTART_MODE=a apt-get -y install qemu-guest-agent
+        apt_retry sudo NEEDRESTART_MODE=a apt-get -y install qemu-guest-agent
     sudo systemctl enable qemu-guest-agent
 else
         log "No specific virtualization tools required for $virt."
@@ -165,7 +174,7 @@ sleep $SHORT_DELAY
 setup_autofs() {
     log "Setting up AUTOFS for NFS mounts..."
     sleep $SHORT_DELAY
-    sudo NEEDRESTART_MODE=a apt-get -y install autofs
+    apt_retry sudo NEEDRESTART_MODE=a apt-get -y install autofs
     
     # Copy autofs configuration files
     if [ -f "$(dirname "$0")/configs/etc/autofs/auto.master" ]; then
@@ -187,7 +196,7 @@ setup_samba() {
 
     # Install Samba packages from official Ubuntu repo
     log "Installing Samba packages..."
-    sudo NEEDRESTART_MODE=a apt-get -y install samba samba-common-bin || error "Error installing Samba packages. Exiting."
+    apt_retry sudo NEEDRESTART_MODE=a apt-get -y install samba samba-common-bin || error "Error installing Samba packages. Exiting."
 
     # Copy Samba configuration files
     if [ -f "$(dirname "$0")/configs/etc/samba/smb.conf" ]; then

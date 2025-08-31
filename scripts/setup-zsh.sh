@@ -15,9 +15,15 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     SUDO=""
 else
     PM="apt-get"
-    INSTALL_CMD="sudo apt-get -y install"
+    INSTALL_CMD="apt_retry sudo apt-get install -y"
     ZSH_PATH="/usr/bin/zsh"
     SUDO="sudo"
+fi
+
+# Source shared helpers (apt_retry) if present when running this script directly
+if [ -f "$(dirname "$0")/common.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$(dirname "$0")/common.sh"
 fi
 
 OH_MY_ZSH_DIR="$HOME/.oh-my-zsh"

@@ -8,6 +8,12 @@ log()   { echo -e "\033[1;32m[INFO]\033[0m $*"; }
 warn()  { echo -e "\033[1;33m[WARN]\033[0m $*"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $*"; exit 1; }
 
+# Source shared helpers (apt_retry etc.) if present
+if [ -f "$(dirname "$0")/common.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$(dirname "$0")/common.sh"
+fi
+
 main() {
     # --- Configurable Variables ---
     CREDENTIALS_FILE="${CREDENTIALS_FILE:-/mnt/linux/postfix/sasl_passwd}"
@@ -71,8 +77,8 @@ main() {
         log INFO "Installing Postfix and dependencies..."
         echo "postfix postfix/mailname string $FQDN" | sudo debconf-set-selections
         echo "postfix postfix/main_mailer_type select Internet Site" | sudo debconf-set-selections
-        sudo apt-get update | sudo tee -a "$LOG_FILE"
-        sudo apt-get install -y mailutils libsasl2-modules postfix | sudo tee -a "$LOG_FILE"
+    apt_retry sudo apt-get update | sudo tee -a "$LOG_FILE"
+    apt_retry sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mailutils libsasl2-modules postfix | sudo tee -a "$LOG_FILE"
     else
         log INFO "Postfix already installed. Skipping installation."
     fi
