@@ -134,38 +134,75 @@ clone_dotfiles() {
     fi
 
     if [ -f "$HOME/.ssh/homelab" ]; then
-        echo "[INFO] Homelab SSH key found; testing SSH authentication (non-interactive)..."
-        # Test SSH auth in batch mode to avoid passphrase prompts. If this fails, fall back to HTTPS.
-        if ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>/dev/null; then
+        echo "[INFO] Homelab SSH key found; checking ssh-agent for identities..."
+        AGENT_OK=false
+        if [ -S "${SSH_AUTH_SOCK:-}" ] && ssh-add -l &>/dev/null; then
+            AGENT_OK=true
+        else
+            # Agent has no identities. Try to add the homelab key if it's not encrypted.
+            if grep -q "ENCRYPTED" "$HOME/.ssh/homelab" 2>/dev/null; then
+                echo "[WARN] The homelab SSH key appears to be encrypted."
+                read -r -p "Add it to the ssh-agent now so we can use SSH for cloning? [Y/n] " resp
+                resp=${resp:-Y}
+                if [[ "$resp" =~ ^[Yy] ]]; then
+                    echo "[INFO] Running 'ssh-add ~/.ssh/homelab' - you may be prompted for the passphrase."
+                    if ssh-add "$HOME/.ssh/homelab"; then
+                        AGENT_OK=true
+                    else
+                        echo "[WARN] ssh-add failed or was cancelled. Will fall back to HTTPS."
+                    fi
+                else
+                    echo "[INFO] Skipping adding encrypted key to agent. Will fall back to HTTPS."
+                fi
+            else
+                # Non-encrypted key - try to add non-interactively
+                if ssh-add "$HOME/.ssh/homelab" &>/dev/null; then
+                    AGENT_OK=true
+                else
+                    echo "[WARN] Failed to add homelab key to agent non-interactively. Will fall back to HTTPS."
+                fi
+            fi
+        fi
+
+        if $AGENT_OK && ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>/dev/null; then
             echo "[INFO] SSH authentication successful; cloning dotfiles with yadm (SSH)..."
             if yadm clone "$DOTFILES_REPO_SSH"; then
                 echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                 yadm checkout --force
             else
                 echo "[WARN] yadm SSH clone failed; falling back to HTTPS..."
-                if yadm clone "$DOTFILES_REPO"; then
+                if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
                     echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                     yadm checkout --force
                 else
-                    echo "[ERROR] Failed to clone dotfiles via both SSH and HTTPS."; exit 1;
+                    echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
+                    echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
+                    echo "You can manually run: yadm clone $DOTFILES_REPO";
+                    exit 1;
                 fi
             fi
         else
             echo "[WARN] SSH authentication not available (agent/key not loaded). Cloning via HTTPS..."
-            if yadm clone "$DOTFILES_REPO"; then
+            if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
                 echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                 yadm checkout --force
             else
-                echo "[ERROR] Failed to clone dotfiles via HTTPS."; exit 1;
+                echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
+                echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
+                echo "You can manually run: yadm clone $DOTFILES_REPO";
+                exit 1;
             fi
         fi
     else
         echo "[INFO] Homelab SSH key not found, cloning dotfiles with HTTPS..."
-        if yadm clone "$DOTFILES_REPO"; then
+        if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
             echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
             yadm checkout --force
         else
-            echo "[ERROR] Failed to clone dotfiles via HTTPS."; exit 1;
+            echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
+            echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
+            echo "You can manually run: yadm clone $DOTFILES_REPO";
+            exit 1;
         fi
     fi
 }
