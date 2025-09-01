@@ -42,6 +42,18 @@ install_zsh() {
     fi
 }
 
+check_debug_log() {
+    local dbg="$HOME/initial-setup-debug.log"
+    if [ -f "$dbg" ]; then
+        echo "[INFO] Found debug log: $dbg — showing last 200 lines for quick inspection"
+        echo "--- BEGIN initial-setup-debug.log (last 200 lines) ---"
+        tail -n 200 "$dbg" || echo "[WARN] Unable to read $dbg"
+        echo "--- END initial-setup-debug.log ---"
+    else
+        :
+    fi
+}
+
 install_yadm() {
     if ! command -v yadm &>/dev/null; then
         echo "[INFO] Installing yadm..."
@@ -67,7 +79,7 @@ install_autosuggestions() {
         echo "[INFO] Installing Zsh Autosuggestions plugin..."
         git clone https://github.com/zsh-users/zsh-autosuggestions "$AUTO_SUGGESTIONS" || {
             echo "[ERROR] Failed to clone Zsh Autosuggestions plugin."
-            exit 1
+            return 1
         }
     fi
 }
@@ -92,7 +104,7 @@ setup_ssh_key() {
             chmod 600 "$HOME/.ssh/homelab"
         else
             echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/homelab."
-            exit 1
+            return 1
         fi
     fi
 
@@ -104,7 +116,7 @@ setup_ssh_key() {
             chmod 644 "$HOME/.ssh/homelab.pub"
         else
             echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/homelab.pub."
-            exit 1
+            return 1
         fi
     fi
 
@@ -196,7 +208,7 @@ clone_dotfiles() {
             SSH_TEST_OUTPUT=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>&1 || true)
             if echo "$SSH_TEST_OUTPUT" | grep -qi "successfully authenticated"; then
                 echo "[INFO] SSH authentication successful; cloning dotfiles with yadm (SSH)..."
-                if yadm clone "$DOTFILES_REPO_SSH"; then
+            if yadm clone "$DOTFILES_REPO_SSH"; then
                     echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                     yadm checkout --force
                 else
@@ -205,24 +217,24 @@ clone_dotfiles() {
                         echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                         yadm checkout --force
                     else
-                        echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
-                        echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
-                        echo "You can manually run: yadm clone $DOTFILES_REPO";
-                        exit 1;
+                echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
+                echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
+                echo "You can manually run: yadm clone $DOTFILES_REPO";
+                return 1;
                     fi
                 fi
             else
                 echo "[WARN] SSH authentication not available (agent/key not accepted). SSH test output:" >&2
                 echo "$SSH_TEST_OUTPUT" >&2
                 echo "[WARN] Cloning via HTTPS..."
-                if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
+                    if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
                     echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                     yadm checkout --force
                 else
-                    echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
-                    echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
-                    echo "You can manually run: yadm clone $DOTFILES_REPO";
-                    exit 1;
+                        echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
+                        echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
+                        echo "You can manually run: yadm clone $DOTFILES_REPO";
+                        return 1;
                 fi
             fi
         else
@@ -234,7 +246,7 @@ clone_dotfiles() {
                 echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
                 echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
                 echo "You can manually run: yadm clone $DOTFILES_REPO";
-                exit 1;
+                return 1;
             fi
         fi
     else
@@ -252,6 +264,14 @@ clone_dotfiles() {
 }
 
 main() {
+    # Ensure we append all output from this run to a persistent debug log in the user's home
+    LOG="$HOME/initial-setup-debug.log"
+    # Show that we'll append to this log and keep a small header per run
+    echo "[INFO] Appending run output to $LOG"
+    echo "--- initial-setup run: $(date -u) ---" >> "$LOG" 2>/dev/null || true
+    # Redirect remaining stdout/stderr to both the console and the debug log
+    exec > >(tee -a "$LOG") 2>&1 || true
+
     # Robust ssh-agent logic: tie to existing agent or start a new one
     if [ -z "${SSH_AUTH_SOCK:-}" ] || ! [ -S "${SSH_AUTH_SOCK:-}" ]; then
         AGENT_SOCK=$(find /tmp/ssh-* -type s 2>/dev/null | head -n 1)
@@ -266,8 +286,9 @@ main() {
         echo "[INFO] SSH agent already available at ${SSH_AUTH_SOCK:-}"
     fi
     # Now that the ssh-agent is available, ensure the private key is present
-    setup_ssh_key
-    ssh-add ~/.ssh/homelab
+    setup_ssh_key || echo "[WARN] setup_ssh_key reported issues; continuing"
+    # Attempt to add key but do not let a failing ssh-add terminate the whole script
+    ssh-add ~/.ssh/homelab || echo "[WARN] ssh-add failed or was cancelled; continuing without agent identity"
     install_zsh
     install_yadm
     install_oh_my_zsh
