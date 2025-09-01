@@ -161,17 +161,17 @@ clone_dotfiles() {
 main() {
     setup_ssh_key
     # Robust ssh-agent logic: tie to existing agent or start a new one
-    if [ -z "$SSH_AUTH_SOCK" ] || ! [ -S "$SSH_AUTH_SOCK" ]; then
+    if [ -z "${SSH_AUTH_SOCK:-}" ] || ! [ -S "${SSH_AUTH_SOCK:-}" ]; then
         AGENT_SOCK=$(find /tmp/ssh-* -type s 2>/dev/null | head -n 1)
         if [ -n "$AGENT_SOCK" ]; then
             export SSH_AUTH_SOCK="$AGENT_SOCK"
-            echo "[INFO] Found existing ssh-agent at $SSH_AUTH_SOCK"
+            echo "[INFO] Found existing ssh-agent at ${SSH_AUTH_SOCK:-}"
         else
             eval "$(ssh-agent -s)"
             echo "[INFO] Started new ssh-agent"
         fi
     else
-        echo "[INFO] SSH agent already available at $SSH_AUTH_SOCK"
+        echo "[INFO] SSH agent already available at ${SSH_AUTH_SOCK:-}"
     fi
     ssh-add ~/.ssh/homelab
     install_zsh
