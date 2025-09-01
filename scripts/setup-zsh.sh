@@ -192,13 +192,29 @@ clone_dotfiles() {
             fi
         fi
 
-        if $AGENT_OK && ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>/dev/null; then
-            echo "[INFO] SSH authentication successful; cloning dotfiles with yadm (SSH)..."
-            if yadm clone "$DOTFILES_REPO_SSH"; then
-                echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-                yadm checkout --force
+        if $AGENT_OK ; then
+            SSH_TEST_OUTPUT=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>&1 || true)
+            if echo "$SSH_TEST_OUTPUT" | grep -qi "successfully authenticated"; then
+                echo "[INFO] SSH authentication successful; cloning dotfiles with yadm (SSH)..."
+                if yadm clone "$DOTFILES_REPO_SSH"; then
+                    echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+                    yadm checkout --force
+                else
+                    echo "[WARN] yadm SSH clone failed; falling back to HTTPS..."
+                    if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
+                        echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+                        yadm checkout --force
+                    else
+                        echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
+                        echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
+                        echo "You can manually run: yadm clone $DOTFILES_REPO";
+                        exit 1;
+                    fi
+                fi
             else
-                echo "[WARN] yadm SSH clone failed; falling back to HTTPS..."
+                echo "[WARN] SSH authentication not available (agent/key not accepted). SSH test output:" >&2
+                echo "$SSH_TEST_OUTPUT" >&2
+                echo "[WARN] Cloning via HTTPS..."
                 if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
                     echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                     yadm checkout --force
