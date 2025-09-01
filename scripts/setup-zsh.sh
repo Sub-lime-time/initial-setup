@@ -171,7 +171,6 @@ clone_dotfiles() {
 }
 
 main() {
-    setup_ssh_key
     # Robust ssh-agent logic: tie to existing agent or start a new one
     if [ -z "${SSH_AUTH_SOCK:-}" ] || ! [ -S "${SSH_AUTH_SOCK:-}" ]; then
         AGENT_SOCK=$(find /tmp/ssh-* -type s 2>/dev/null | head -n 1)
@@ -185,6 +184,8 @@ main() {
     else
         echo "[INFO] SSH agent already available at ${SSH_AUTH_SOCK:-}"
     fi
+    # Now that the ssh-agent is available, ensure the private key is present
+    setup_ssh_key
     ssh-add ~/.ssh/homelab
     install_zsh
     install_yadm
