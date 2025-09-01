@@ -134,17 +134,29 @@ clone_dotfiles() {
     fi
 
     if [ -f "$HOME/.ssh/homelab" ]; then
-        echo "[INFO] Cloning dotfiles with yadm (SSH)..."
-        if yadm clone "$DOTFILES_REPO_SSH"; then
-            echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-            yadm checkout --force
+        echo "[INFO] Homelab SSH key found; testing SSH authentication (non-interactive)..."
+        # Test SSH auth in batch mode to avoid passphrase prompts. If this fails, fall back to HTTPS.
+        if ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>/dev/null; then
+            echo "[INFO] SSH authentication successful; cloning dotfiles with yadm (SSH)..."
+            if yadm clone "$DOTFILES_REPO_SSH"; then
+                echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+                yadm checkout --force
+            else
+                echo "[WARN] yadm SSH clone failed; falling back to HTTPS..."
+                if yadm clone "$DOTFILES_REPO"; then
+                    echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
+                    yadm checkout --force
+                else
+                    echo "[ERROR] Failed to clone dotfiles via both SSH and HTTPS."; exit 1;
+                fi
+            fi
         else
-            echo "[WARN] SSH clone failed, falling back to HTTPS..."
+            echo "[WARN] SSH authentication not available (agent/key not loaded). Cloning via HTTPS..."
             if yadm clone "$DOTFILES_REPO"; then
                 echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
                 yadm checkout --force
             else
-                echo "[ERROR] Failed to clone dotfiles via both SSH and HTTPS."; exit 1;
+                echo "[ERROR] Failed to clone dotfiles via HTTPS."; exit 1;
             fi
         fi
     else
