@@ -124,6 +124,34 @@ Host github.com
 EOF
         chmod 600 "$HOME/.ssh/config"
     fi
+
+    # Try to add the key to the ssh-agent if available
+    if [ -S "${SSH_AUTH_SOCK:-}" ]; then
+        # If agent already has identities, skip adding unless none are present
+        if ssh-add -l &>/dev/null; then
+            # agent has identities; ensure our key is present (best-effort)
+            if ! ssh-add -l | grep -q "homelab"; then
+                echo "[INFO] Adding homelab key to ssh-agent (agent already running)."
+                if grep -q "ENCRYPTED" "$HOME/.ssh/homelab" 2>/dev/null; then
+                    echo "[INFO] homelab key is encrypted; you may be prompted for a passphrase."
+                    ssh-add "$HOME/.ssh/homelab" || echo "[WARN] ssh-add failed or was cancelled."
+                else
+                    ssh-add "$HOME/.ssh/homelab" &>/dev/null || echo "[WARN] ssh-add failed to add homelab key."
+                fi
+            fi
+        else
+            # No identities in agent; try to add the key
+            echo "[INFO] ssh-agent is running but has no identities. Adding homelab key..."
+            if grep -q "ENCRYPTED" "$HOME/.ssh/homelab" 2>/dev/null; then
+                echo "[INFO] homelab key is encrypted; you may be prompted for a passphrase."
+                ssh-add "$HOME/.ssh/homelab" || echo "[WARN] ssh-add failed or was cancelled."
+            else
+                ssh-add "$HOME/.ssh/homelab" &>/dev/null || echo "[WARN] ssh-add failed to add homelab key."
+            fi
+        fi
+    else
+        echo "[INFO] No ssh-agent socket found; key installed but not added to agent." >&2
+    fi
 }
 
 clone_dotfiles() {
