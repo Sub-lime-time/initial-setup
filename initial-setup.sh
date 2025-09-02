@@ -274,13 +274,22 @@ setup_github_ssh_key_from_server() {
     log "Fetching GitHub SSH key from 1Password CLI..."
     if command -v op &> /dev/null; then
         # Fetch private key
-        op read "op://Private/id_ed25519_homelab/private key" > ~/.ssh/github
-        
+        mkdir -p ~/.ssh
+        # Prefer a named field for private key; fall back to legacy path
+        if op read "op://Private/id_ed25519_github/private key" &>/dev/null; then
+            op read "op://Private/id_ed25519_github/private key" > ~/.ssh/github
+        else
+            op read "op://Private/id_ed25519_homelab/private key" > ~/.ssh/github
+        fi
+
         chmod 600 ~/.ssh/github
-        # Write public key
-        echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH7vspSV++pdVro1MbLaHuHZFbMWA27DG70iKKtXyLf0" > ~/.ssh/github.pub
-        chmod 644 ~/.ssh/github.pub
-        log "GitHub SSH key fetched from 1Password and installed."
+        # Derive public key from private key to avoid mismatches
+        if ssh-keygen -y -f ~/.ssh/github > ~/.ssh/github.pub 2>/dev/null; then
+            chmod 644 ~/.ssh/github.pub
+            log "GitHub SSH private key fetched and public key derived successfully."
+        else
+            warn "Failed to derive public key from fetched private key. Please verify the key stored in 1Password."
+        fi
     else
         warn "1Password CLI (op) not found. Skipping GitHub SSH key setup."
     fi
