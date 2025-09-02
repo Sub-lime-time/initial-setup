@@ -128,9 +128,9 @@ setup_ssh_key() {
     # Optionally add SSH config for GitHub
     if ! grep -q "Host github.com" "$HOME/.ssh/config" 2>/dev/null; then
         cat <<EOF >> "$HOME/.ssh/config"
-Host github.com
+		Host github.com
     User git
-    IdentityFile ~/.ssh/homelab
+    IdentityFile ~/.ssh/github
     IdentitiesOnly yes
     ForwardAgent yes
 EOF
