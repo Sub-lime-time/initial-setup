@@ -168,7 +168,10 @@ EOF
 
 clone_dotfiles() {
     # Only clone if yadm is not already managing dotfiles
-    if yadm list | grep -q ".zshrc"; then
+    # yadm will print an error to stderr if it hasn't been initialized yet
+    # ("ERROR: Git repo does not exist..."). Suppress that harmless message
+    # while we check whether yadm already manages dotfiles.
+    if yadm list 2>/dev/null | grep -q ".zshrc"; then
         echo "[OK] Dotfiles already managed by yadm. Skipping clone."
         return
     fi
