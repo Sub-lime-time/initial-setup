@@ -412,7 +412,28 @@ sleep $SHORT_DELAY
     if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
         log "Executing setup-zsh as user: $SUDO_USER"
         # Use sudo -H -u so HOME is set to the user's home for the run
-        sudo -H -u "$SUDO_USER" bash -lc "bash '$SETUP_SCRIPT'"
+        # Attempt to discover the invoking user's ssh-agent socket so we can
+        # pass it into the sudo'ed process and preserve agent-based auth.
+        USER_SSH_AUTH_SOCK=""
+        if command -v pgrep >/dev/null 2>&1; then
+            for pid in $(pgrep -u "$SUDO_USER" -x ssh-agent 2>/dev/null || true); do
+                if [ -r "/proc/$pid/environ" ]; then
+                    sock=$(tr '\0' '\n' < /proc/$pid/environ | grep '^SSH_AUTH_SOCK=' | cut -d= -f2- || true)
+                    if [ -n "$sock" ] && [ -S "$sock" ]; then
+                        USER_SSH_AUTH_SOCK="$sock"
+                        break
+                    fi
+                fi
+            done
+        fi
+
+        if [ -n "$USER_SSH_AUTH_SOCK" ]; then
+            log "Preserving SSH_AUTH_SOCK for user $SUDO_USER: $USER_SSH_AUTH_SOCK"
+            sudo -H -u "$SUDO_USER" env SSH_AUTH_SOCK="$USER_SSH_AUTH_SOCK" bash -lc "bash '$SETUP_SCRIPT'"
+        else
+            log "No ssh-agent socket found for $SUDO_USER; running setup without SSH_AUTH_SOCK preserved."
+            sudo -H -u "$SUDO_USER" bash -lc "bash '$SETUP_SCRIPT'"
+        fi
     else
         # When not running under sudo just execute in the current context
         bash "$SETUP_SCRIPT"
