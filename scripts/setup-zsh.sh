@@ -96,27 +96,36 @@ setup_ssh_key() {
         fi
     fi
 
-    # Fetch Homelab private key from 1Password if not present
-    if [ ! -f "$HOME/.ssh/homelab" ]; then
+    # Fetch GitHub private key from 1Password if not present. Some vaults
+    # may store the key under id_ed25519_github; fall back to a homelab key
+    # only if the github key isn't available.
+    if [ ! -f "$HOME/.ssh/github" ]; then
         if command -v op &>/dev/null; then
-            echo "[INFO] Fetching Homelab private key from 1Password..."
-            op read "op://Private/id_ed25519_homelab/private key" > "$HOME/.ssh/homelab"
-            chmod 600 "$HOME/.ssh/homelab"
+            echo "[INFO] Fetching GitHub private key from 1Password (prefers id_ed25519_github)..."
+            if op read "op://Private/id_ed25519_github/private key" &>/dev/null; then
+                op read "op://Private/id_ed25519_github/private key" > "$HOME/.ssh/github"
+            elif op read "op://Private/id_ed25519_homelab/private key" &>/dev/null; then
+                echo "[INFO] id_ed25519_github not found; falling back to id_ed25519_homelab as github identity"
+                op read "op://Private/id_ed25519_homelab/private key" > "$HOME/.ssh/github"
+            else
+                echo "[WARN] No suitable key found in 1Password for GitHub (tried id_ed25519_github and id_ed25519_homelab)."
+            fi
+            if [ -f "$HOME/.ssh/github" ]; then
+                chmod 600 "$HOME/.ssh/github"
+            fi
         else
-            echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/homelab."
+            echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/github."
             return 1
         fi
     fi
 
-    # Fetch Homelab public key from 1Password if not present
-    if [ ! -f "$HOME/.ssh/homelab.pub" ]; then
-        if command -v op &>/dev/null; then
-            echo "[INFO] Fetching Homelab public key from 1Password..."
-            op read "op://Private/id_ed25519_homelab/public key" > "$HOME/.ssh/homelab.pub"
-            chmod 644 "$HOME/.ssh/homelab.pub"
+    # Derive public key from the private key to avoid mismatches
+    if [ -f "$HOME/.ssh/github" ] && [ ! -f "$HOME/.ssh/github.pub" ]; then
+        if ssh-keygen -y -f "$HOME/.ssh/github" > "$HOME/.ssh/github.pub" 2>/dev/null; then
+            chmod 644 "$HOME/.ssh/github.pub"
+            echo "[INFO] Derived public key from private key: ~/.ssh/github.pub"
         else
-            echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/homelab.pub."
-            return 1
+            echo "[WARN] Failed to derive public key from ~/.ssh/github; public key not written."
         fi
     fi
 
@@ -125,10 +134,10 @@ setup_ssh_key() {
         ssh-keyscan github.com >> "$HOME/.ssh/known_hosts"
     fi
 
-    # Optionally add SSH config for GitHub
+    # Optionally add SSH config for GitHub (use the github identity)
     if ! grep -q "Host github.com" "$HOME/.ssh/config" 2>/dev/null; then
-        cat <<EOF >> "$HOME/.ssh/config"
-		Host github.com
+        cat <<'EOF' >> "$HOME/.ssh/config"
+Host github.com
     User git
     IdentityFile ~/.ssh/github
     IdentitiesOnly yes
@@ -142,23 +151,23 @@ EOF
         # If agent already has identities, skip adding unless none are present
         if ssh-add -l &>/dev/null; then
             # agent has identities; ensure our key is present (best-effort)
-            if ! ssh-add -l | grep -q "homelab"; then
-                echo "[INFO] Adding homelab key to ssh-agent (agent already running)."
-                if grep -q "ENCRYPTED" "$HOME/.ssh/homelab" 2>/dev/null; then
-                    echo "[INFO] homelab key is encrypted; you may be prompted for a passphrase."
-                    ssh-add "$HOME/.ssh/homelab" || echo "[WARN] ssh-add failed or was cancelled."
+            if ! ssh-add -l | grep -q "github"; then
+                echo "[INFO] Adding github key to ssh-agent (agent already running)."
+                if grep -q "ENCRYPTED" "$HOME/.ssh/github" 2>/dev/null; then
+                    echo "[INFO] github key is encrypted; you may be prompted for a passphrase."
+                    ssh-add "$HOME/.ssh/github" || echo "[WARN] ssh-add failed or was cancelled."
                 else
-                    ssh-add "$HOME/.ssh/homelab" &>/dev/null || echo "[WARN] ssh-add failed to add homelab key."
+                    ssh-add "$HOME/.ssh/github" &>/dev/null || echo "[WARN] ssh-add failed to add github key."
                 fi
             fi
         else
             # No identities in agent; try to add the key
-            echo "[INFO] ssh-agent is running but has no identities. Adding homelab key..."
-            if grep -q "ENCRYPTED" "$HOME/.ssh/homelab" 2>/dev/null; then
-                echo "[INFO] homelab key is encrypted; you may be prompted for a passphrase."
-                ssh-add "$HOME/.ssh/homelab" || echo "[WARN] ssh-add failed or was cancelled."
+            echo "[INFO] ssh-agent is running but has no identities. Adding github key..."
+            if grep -q "ENCRYPTED" "$HOME/.ssh/github" 2>/dev/null; then
+                echo "[INFO] github key is encrypted; you may be prompted for a passphrase."
+                ssh-add "$HOME/.ssh/github" || echo "[WARN] ssh-add failed or was cancelled."
             else
-                ssh-add "$HOME/.ssh/homelab" &>/dev/null || echo "[WARN] ssh-add failed to add homelab key."
+                ssh-add "$HOME/.ssh/github" &>/dev/null || echo "[WARN] ssh-add failed to add github key."
             fi
         fi
     else
