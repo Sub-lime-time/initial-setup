@@ -404,7 +404,19 @@ setup_postfix() {
 setup_zsh() {
     log "Setup ZSH"
 sleep $SHORT_DELAY
-    source "$(dirname "$0")/scripts/setup-zsh.sh"
+    # Run the zsh setup script as the original invoking user when this
+    # master installer is run with sudo. Sourcing as root hides the
+    # real user's HOME and SSH agent, causing auth and logging issues.
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    SETUP_SCRIPT="$SCRIPT_DIR/scripts/setup-zsh.sh"
+    if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
+        log "Executing setup-zsh as user: $SUDO_USER"
+        # Use sudo -H -u so HOME is set to the user's home for the run
+        sudo -H -u "$SUDO_USER" bash -lc "bash '$SETUP_SCRIPT'"
+    else
+        # When not running under sudo just execute in the current context
+        bash "$SETUP_SCRIPT"
+    fi
 }
 
 reboot_prompt() {
