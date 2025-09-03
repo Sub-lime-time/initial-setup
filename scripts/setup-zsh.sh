@@ -99,33 +99,37 @@ setup_ssh_key() {
     # Fetch GitHub private key from 1Password if not present. Some vaults
     # may store the key under id_ed25519_github; fall back to a homelab key
     # only if the github key isn't available.
-    if [ ! -f "$HOME/.ssh/github" ]; then
-        if command -v op &>/dev/null; then
-            echo "[INFO] Fetching GitHub private key from 1Password (prefers id_ed25519_github)..."
-            if op read "op://Private/id_ed25519_github/private key" &>/dev/null; then
-                op read "op://Private/id_ed25519_github/private key" > "$HOME/.ssh/github"
-            elif op read "op://Private/id_ed25519_homelab/private key" &>/dev/null; then
-                echo "[INFO] id_ed25519_github not found; falling back to id_ed25519_homelab as github identity"
-                op read "op://Private/id_ed25519_homelab/private key" > "$HOME/.ssh/github"
-            else
-                echo "[WARN] No suitable key found in 1Password for GitHub (tried id_ed25519_github and id_ed25519_homelab)."
-            fi
-            if [ -f "$HOME/.ssh/github" ]; then
-                chmod 600 "$HOME/.ssh/github"
-            fi
-        else
-            echo "[ERROR] 1Password CLI (op) not found. Please install it or manually place your key at ~/.ssh/github."
-            return 1
+    # Ensure we have both private and public GitHub keys in ~/.ssh/github and
+    # ~/.ssh/github.pub. These are required for authenticating to GitHub; fail
+    # hard if we can't fetch both fields from 1Password.
+    if [ ! -f "$HOME/.ssh/github" ] || [ ! -f "$HOME/.ssh/github.pub" ]; then
+        if ! command -v op &>/dev/null; then
+            echo "[ERROR] 1Password CLI (op) not found. Please install it or place your GitHub keys at ~/.ssh/github and ~/.ssh/github.pub." >&2
+            exit 1
         fi
-    fi
 
-    # Derive public key from the private key to avoid mismatches
-    if [ -f "$HOME/.ssh/github" ] && [ ! -f "$HOME/.ssh/github.pub" ]; then
-        if ssh-keygen -y -f "$HOME/.ssh/github" > "$HOME/.ssh/github.pub" 2>/dev/null; then
-            chmod 644 "$HOME/.ssh/github.pub"
-            echo "[INFO] Derived public key from private key: ~/.ssh/github.pub"
+        echo "[INFO] Fetching GitHub private+public keys from 1Password (id_ed25519_github)..."
+
+        # Read each field once into temp files, then move them into place
+        priv_tmp=$(mktemp "$HOME/.ssh/github.XXXX") || { echo "[ERROR] mktemp failed" >&2; exit 1; }
+        pub_tmp=$(mktemp "$HOME/.ssh/github.pub.XXXX") || { rm -f "$priv_tmp"; echo "[ERROR] mktemp failed" >&2; exit 1; }
+
+        if op read "op://Private/id_ed25519_github/private key" > "$priv_tmp" 2>/dev/null; then
+            if op read "op://Private/id_ed25519_github/public key" > "$pub_tmp" 2>/dev/null; then
+                mv "$priv_tmp" "$HOME/.ssh/github"
+                mv "$pub_tmp" "$HOME/.ssh/github.pub"
+                chmod 600 "$HOME/.ssh/github"
+                chmod 644 "$HOME/.ssh/github.pub"
+                echo "[INFO] Installed GitHub private and public keys to ~/.ssh/github{,.pub}."
+            else
+                rm -f "$priv_tmp" "$pub_tmp"
+                echo "[ERROR] Could not read public key field 'public key' for id_ed25519_github from 1Password." >&2
+                exit 1
+            fi
         else
-            echo "[WARN] Failed to derive public key from ~/.ssh/github; public key not written."
+            rm -f "$priv_tmp" "$pub_tmp"
+            echo "[ERROR] Could not read private key field 'private key' for id_ed25519_github from 1Password." >&2
+            exit 1
         fi
     fi
 
@@ -300,7 +304,7 @@ main() {
     # Now that the ssh-agent is available, ensure the private key is present
     setup_ssh_key || echo "[WARN] setup_ssh_key reported issues; continuing"
     # Attempt to add key but do not let a failing ssh-add terminate the whole script
-    ssh-add ~/.ssh/homelab || echo "[WARN] ssh-add failed or was cancelled; continuing without agent identity"
+    ssh-add ~/.ssh/github || echo "[WARN] ssh-add failed or was cancelled; continuing without agent identity"
     install_zsh
     install_yadm
     install_oh_my_zsh
