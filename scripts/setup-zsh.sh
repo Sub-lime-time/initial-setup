@@ -133,9 +133,16 @@ setup_ssh_key() {
         fi
     fi
 
-    # Add GitHub to known_hosts if not already present
-    if ! grep -q github.com "$HOME/.ssh/known_hosts" 2>/dev/null; then
-        ssh-keyscan github.com >> "$HOME/.ssh/known_hosts"
+    # Add GitHub to known_hosts if not already present.
+    # Use ssh-keygen -F which correctly recognizes hashed hostnames.
+    if ! ssh-keygen -F github.com -f "$HOME/.ssh/known_hosts" >/dev/null 2>&1; then
+        echo "[INFO] github.com not found in known_hosts; fetching host key(s)"
+        # Collect common key types explicitly to be thorough
+        ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null || {
+            echo "[WARN] ssh-keyscan failed to fetch github.com host key; known_hosts may be incomplete" >&2
+        }
+    else
+        echo "[INFO] github.com already present in known_hosts"
     fi
 
     # Optionally add SSH config for GitHub (use the github identity)
@@ -187,6 +194,20 @@ clone_dotfiles() {
     fi
 
     echo "[INFO] Cloning dotfiles (SSH-only policy)..."
+
+    # Quick TCP reachability check for GitHub SSH (port 22). This helps
+    # fail fast with a clear message when outbound SSH is blocked by the
+    # network/firewall. If nc isn't available we skip this check.
+    if command -v nc >/dev/null 2>&1; then
+        if ! nc -vz github.com 22 >/dev/null 2>&1; then
+            echo "[WARN] TCP connection to github.com:22 failed. Port 22 may be blocked by a firewall or network policy." >&2
+            echo "[WARN] If port 22 is blocked you can either enable outbound SSH or use an SSH-over-443 fallback (not enabled by this script)." >&2
+        else
+            echo "[INFO] TCP connection to github.com:22 looks reachable."
+        fi
+    else
+        echo "[INFO] 'nc' (netcat) not found; skipping quick TCP reachability test for github.com:22"
+    fi
 
     # Require the GitHub identity to be present
     if [ ! -f "$HOME/.ssh/github" ]; then
