@@ -180,102 +180,56 @@ EOF
 }
 
 clone_dotfiles() {
-    # Only clone if yadm is not already managing dotfiles
-    # yadm will print an error to stderr if it hasn't been initialized yet
-    # ("ERROR: Git repo does not exist..."). Suppress that harmless message
-    # while we check whether yadm already manages dotfiles.
+    # If yadm already manages dotfiles, skip cloning
     if yadm list 2>/dev/null | grep -q ".zshrc"; then
         echo "[OK] Dotfiles already managed by yadm. Skipping clone."
-        return
+        return 0
     fi
 
-    if [ -f "$HOME/.ssh/homelab" ]; then
-        echo "[INFO] Homelab SSH key found; checking ssh-agent for identities..."
-        AGENT_OK=false
-        if [ -S "${SSH_AUTH_SOCK:-}" ] && ssh-add -l &>/dev/null; then
-            AGENT_OK=true
-        else
-            # Agent has no identities. Try to add the homelab key if it's not encrypted.
-            if grep -q "ENCRYPTED" "$HOME/.ssh/homelab" 2>/dev/null; then
-                echo "[WARN] The homelab SSH key appears to be encrypted."
-                read -r -p "Add it to the ssh-agent now so we can use SSH for cloning? [Y/n] " resp
-                resp=${resp:-Y}
-                if [[ "$resp" =~ ^[Yy] ]]; then
-                    echo "[INFO] Running 'ssh-add ~/.ssh/homelab' - you may be prompted for the passphrase."
-                    if ssh-add "$HOME/.ssh/homelab"; then
-                        AGENT_OK=true
-                    else
-                        echo "[WARN] ssh-add failed or was cancelled. Will fall back to HTTPS."
-                    fi
-                else
-                    echo "[INFO] Skipping adding encrypted key to agent. Will fall back to HTTPS."
-                fi
-            else
-                # Non-encrypted key - try to add non-interactively
-                if ssh-add "$HOME/.ssh/homelab" &>/dev/null; then
-                    AGENT_OK=true
-                else
-                    echo "[WARN] Failed to add homelab key to agent non-interactively. Will fall back to HTTPS."
-                fi
-            fi
-        fi
+    echo "[INFO] Cloning dotfiles (SSH-only policy)..."
 
-        if $AGENT_OK ; then
-            SSH_TEST_OUTPUT=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>&1 || true)
-            if echo "$SSH_TEST_OUTPUT" | grep -qi "successfully authenticated"; then
-                echo "[INFO] SSH authentication successful; cloning dotfiles with yadm (SSH)..."
-            if yadm clone "$DOTFILES_REPO_SSH"; then
-                    echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-                    yadm checkout --force
-                else
-                    echo "[WARN] yadm SSH clone failed; falling back to HTTPS..."
-                    if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
-                        echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-                        yadm checkout --force
-                    else
-                echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
-                echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
-                echo "You can manually run: yadm clone $DOTFILES_REPO";
-                return 1;
-                    fi
-                fi
-            else
-                echo "[WARN] SSH authentication not available (agent/key not accepted). SSH test output:" >&2
-                echo "$SSH_TEST_OUTPUT" >&2
-                echo "[WARN] Cloning via HTTPS..."
-                    if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
-                    echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-                    yadm checkout --force
-                else
-                        echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
-                        echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
-                        echo "You can manually run: yadm clone $DOTFILES_REPO";
-                        return 1;
-                fi
-            fi
-        else
-            echo "[WARN] SSH authentication not available (agent/key not loaded). Cloning via HTTPS..."
-            if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
-                echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-                yadm checkout --force
-            else
-                echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
-                echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
-                echo "You can manually run: yadm clone $DOTFILES_REPO";
-                return 1;
-            fi
+    # Require the GitHub identity to be present
+    if [ ! -f "$HOME/.ssh/github" ]; then
+        echo "[ERROR] Required SSH identity ~/.ssh/github not found. Run setup_ssh_key or place your GitHub key at ~/.ssh/github." >&2
+        return 1
+    fi
+
+    # Ensure ssh-agent has the key. Try non-interactive add; fail if it can't be added.
+    if [ -S "${SSH_AUTH_SOCK:-}" ] && ssh-add -l &>/dev/null; then
+        echo "[INFO] ssh-agent available and has identities.";
+        # If agent doesn't list our key, attempt to add it non-interactively
+        if ! ssh-add -l | grep -q "$(ssh-keygen -lf "$HOME/.ssh/github.pub" 2>/dev/null | awk '{print $2}')"; then
+            ssh-add "$HOME/.ssh/github" >/dev/null 2>&1 || {
+                echo "[ERROR] Failed to add ~/.ssh/github to the ssh-agent non-interactively. Please add it manually with 'ssh-add ~/.ssh/github' or unlock the key." >&2
+                return 1
+            }
         fi
     else
-        echo "[INFO] Homelab SSH key not found, cloning dotfiles with HTTPS..."
-        if GIT_TERMINAL_PROMPT=0 yadm clone "$DOTFILES_REPO"; then
-            echo "[INFO] Forcing checkout of dotfiles to overwrite local files."
-            yadm checkout --force
+        # Try to add the key (this will start failing if agent isn't running or if key is encrypted)
+        ssh-add "$HOME/.ssh/github" >/dev/null 2>&1 || {
+            echo "[ERROR] No usable ssh-agent or failed to add ~/.ssh/github. Start an agent and add the key (ssh-add ~/.ssh/github)." >&2
+            return 1
+        }
+    fi
+
+    # Test SSH auth to GitHub using agent (BatchMode to avoid prompts)
+    SSH_TEST_OUTPUT=$(ssh -o BatchMode=yes -o ConnectTimeout=5 -T git@github.com 2>&1 || true)
+    if echo "$SSH_TEST_OUTPUT" | grep -qi "successfully authenticated\|You've successfully authenticated"; then
+        echo "[INFO] SSH authentication to GitHub succeeded. Cloning via yadm (SSH)..."
+        if yadm clone "$DOTFILES_REPO_SSH"; then
+            echo "[INFO] Forcing checkout of dotfiles to overwrite local files.";
+            yadm checkout --force || true
+            return 0
         else
-            echo "[ERROR] Failed to clone dotfiles via HTTPS in non-interactive mode.";
-            echo "If the repository is private, load your SSH key into the agent or configure Git credentials and retry.";
-            echo "You can manually run: yadm clone $DOTFILES_REPO";
-            exit 1;
+            echo "[ERROR] yadm SSH clone failed despite successful SSH auth. Output:" >&2
+            echo "$SSH_TEST_OUTPUT" >&2
+            return 1
         fi
+    else
+        echo "[ERROR] SSH authentication to GitHub failed. ssh output:" >&2
+        echo "$SSH_TEST_OUTPUT" >&2
+        echo "Ensure ~/.ssh/github is authorized in your GitHub account and the key is loaded into your ssh-agent." >&2
+        return 1
     fi
 }
 
