@@ -86,11 +86,11 @@ setup_hosts_file() {
         log "Updated /etc/hosts: $lan_ip $fqdn $current_hostname"
         # Ensure 127.0.1.1 line is present and correct
         if grep -q '^127.0.1.1' /etc/hosts; then
-            sudo sed -i "s|^127.0.1.1.*|127.0.1.1 $fqdn $current_hostname|" /etc/hosts
-            log "Updated 127.0.1.1 entry: 127.0.1.1 $fqdn $current_hostname"
+            sudo sed -i "s|^127.0.1.1.*|127.0.1.1  $current_hostname|" /etc/hosts
+            log "Updated 127.0.1.1 entry: 127.0.1.1 $current_hostname"
         else
-            echo "127.0.1.1 $fqdn $current_hostname" | sudo tee -a /etc/hosts
-            log "Added 127.0.1.1 entry: 127.0.1.1 $fqdn $current_hostname"
+            echo "127.0.1.1  $current_hostname" | sudo tee -a /etc/hosts
+            log "Added 127.0.1.1 entry: 127.0.1.1 $current_hostname"
         fi
         echo "================================================"
         echo "\nCurrent /etc/hosts entry for this IP:" 
