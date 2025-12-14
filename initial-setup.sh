@@ -120,7 +120,7 @@ sleep $SHORT_DELAY
     apt_retry sudo apt-get update
     apt_retry sudo NEEDRESTART_MODE=a apt-get dist-upgrade -y
     apt_retry sudo NEEDRESTART_MODE=a apt-get -y install \
-    nfs-common ntp cifs-utils ncdu lsof strace sysstat iotop \
+    nfs-common cifs-utils ncdu lsof strace sysstat iotop \
     mtr nmap dnsutils jq chrony\
     smbclient apt-transport-https ca-certificates curl software-properties-common \
     micro net-tools smartmontools || error "Error installing base packages. Exiting."
