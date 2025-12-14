@@ -102,6 +102,8 @@ setup_hosts_file() {
         echo "================================================"
         echo "Press Enter to continue, or Ctrl+C to abort..."
         read -p "Does this look correct?"
+		echo "Setting hostname"
+		sudo hostnamectl set-hostname "$fqdn"
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
     fi
