@@ -13,34 +13,36 @@ if [ -f "$(dirname "$0")/scripts/common.sh" ]; then
     . "$(dirname "$0")/scripts/common.sh"
 fi
 
-
 SHORT_DELAY=2
 LONG_DELAY=5
 
 log() { echo -e "\033[1;32m[INFO]\033[0m $*"; }
 warn() { echo -e "\033[1;33m[WARN]\033[0m $*"; }
-error() { echo -e "\033[1;31m[ERROR]\033[0m $*"; exit 1; }
+error() {
+    echo -e "\033[1;31m[ERROR]\033[0m $*"
+    exit 1
+}
 
 # Note: apt_retry is implemented in scripts/common.sh and is sourced above when available.
 
 update_bashrc() {
     log "Updating BASH"
-sleep $SHORT_DELAY
+    sleep $SHORT_DELAY
     if ! grep -q "$(dirname "$0")/scripts" ~/.bashrc; then
-        echo "export PATH=\$PATH:$(dirname "$0")/scripts" >> ~/.bashrc
-fi
-source ~/.bashrc
+        echo "export PATH=\$PATH:$(dirname "$0")/scripts" >>~/.bashrc
+    fi
+    source ~/.bashrc
 }
 
 setup_hosts_file() {
     log "Setting up /etc/hosts entries..."
-    
+
     # Backup current hosts file
     sudo cp /etc/hosts /etc/hosts.backup.$(date +%Y%m%d_%H%M%S)
-    
+
     # Get current hostname
     current_hostname=$(hostname)
-    
+
     # Get the primary LAN IP using default gateway
     default_gateway=$(ip route | grep default | awk '{print $3}')
     log "Detected default gateway: $default_gateway"
@@ -53,7 +55,7 @@ setup_hosts_file() {
         lan_ip=""
     fi
     log "Detected LAN IP: $lan_ip"
-    
+
     if [[ -n "$lan_ip" && "$lan_ip" != "127.0.0.1" ]]; then
         # Extract subnet for mapping
         if [[ "$lan_ip" =~ ^10\.([0-9]+)\. ]]; then
@@ -63,20 +65,27 @@ setup_hosts_file() {
         fi
         # Subnet to domain mapping
         case "$subnet" in
-            10.7)
-                domain_name="hq.802ski.com" ;;
-            10.8)
-                domain_name="er.802ski.com" ;;
-            192.168.50)
-                domain_name="la.ramalamba.com" ;;
-            192.168.11)
-                domain_name="nj.zoinks.us" ;;
-            192.168.7)
-                domain_name="hq.802ski.com" ;;
-            192.168.8)
-                domain_name="er.802ski.com" ;;
-            *)
-                domain_name="local" ;;
+        10.7)
+            domain_name="hq.802ski.com"
+            ;;
+        10.8)
+            domain_name="er.802ski.com"
+            ;;
+        192.168.50)
+            domain_name="la.ramalamba.com"
+            ;;
+        192.168.11)
+            domain_name="nj.zoinks.us"
+            ;;
+        192.168.7)
+            domain_name="hq.802ski.com"
+            ;;
+        192.168.8)
+            domain_name="er.802ski.com"
+            ;;
+        *)
+            domain_name="local"
+            ;;
         esac
         fqdn="${current_hostname}.${domain_name}"
         # Remove any existing entry for this IP
@@ -93,17 +102,17 @@ setup_hosts_file() {
             log "Added 127.0.1.1 entry: 127.0.1.1 $current_hostname"
         fi
         echo "================================================"
-        echo "\nCurrent /etc/hosts entry for this IP:" 
+        echo "\nCurrent /etc/hosts entry for this IP:"
         grep "^${lan_ip}[[:space:]]" /etc/hosts
         echo "================================================"
-        echo "Current /etc/hosts entry for 127.0.1.1:" 
+        echo "Current /etc/hosts entry for 127.0.1.1:"
         echo "================================================"
         grep "^127.0.1.1[[:space:]]" /etc/hosts
         echo "================================================"
         echo "Press Enter to continue, or Ctrl+C to abort..."
         read -p "Does this look correct?"
-		echo "Setting hostname"
-		sudo hostnamectl set-hostname "$fqdn"
+        echo "Setting hostname"
+        sudo hostnamectl set-hostname "$fqdn"
     else
         warn "Could not determine LAN IP. Skipping /etc/hosts update."
     fi
@@ -111,23 +120,22 @@ setup_hosts_file() {
 
 set_timezone() {
     log "Setting timezone to America/New_York..."
-sleep $SHORT_DELAY
-sudo timedatectl set-timezone America/New_York
+    sleep $SHORT_DELAY
+    sudo timedatectl set-timezone America/New_York
     log "Current timezone: $(timedatectl | grep 'Time zone')"
 }
 
 install_packages() {
     log "Installing base packages..."
-sleep $SHORT_DELAY
+    sleep $SHORT_DELAY
     apt_retry sudo apt-get update
     apt_retry sudo NEEDRESTART_MODE=a apt-get dist-upgrade -y
     apt_retry sudo NEEDRESTART_MODE=a apt-get -y install \
-    nfs-common cifs-utils ncdu lsof strace sysstat iotop \
-    mtr nmap dnsutils jq chrony\
-    smbclient apt-transport-https ca-certificates curl software-properties-common \
-    micro net-tools smartmontools || error "Error installing base packages. Exiting."
-sleep $SHORT_DELAY
-echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
+        nfs-common cifs-utils ncdu lsof strace sysstat iotop \
+        mtr nmap dnsutils jq chrony smbclient apt-transport-https ca-certificates curl software-properties-common \
+        micro net-tools smartmontools || error "Error installing base packages. Exiting."
+    sleep $SHORT_DELAY
+    echo "iperf3 iperf3/start_autostart boolean true" | sudo debconf-set-selections
     apt_retry sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iperf3
 }
 
@@ -135,18 +143,18 @@ install_1password() {
     log "Installing 1Password CLI..."
     sleep $SHORT_DELAY
     # Official 1Password CLI install script with debsig policy and architecture awareness
-    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-      sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
-      sudo tee /etc/apt/sources.list.d/1password.list && \
-      sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/ && \
-      curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
-      sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol && \
-      sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22 && \
-      curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-      sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg && \
-      sudo apt update && sudo apt install -y 1password-cli
-    if command -v op &> /dev/null; then
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc |
+        sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg &&
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" |
+        sudo tee /etc/apt/sources.list.d/1password.list &&
+        sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/ &&
+        curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol |
+        sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol &&
+        sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22 &&
+        curl -sS https://downloads.1password.com/linux/keys/1password.asc |
+        sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg &&
+        sudo apt update && sudo apt install -y 1password-cli
+    if command -v op &>/dev/null; then
         log "1Password CLI installed successfully."
     else
         error "1Password CLI installation failed."
@@ -154,22 +162,22 @@ install_1password() {
 }
 
 setup_virtualization_tools() {
-virt=$(systemd-detect-virt)
-if [ "$virt" = "microsoft" ]; then
+    virt=$(systemd-detect-virt)
+    if [ "$virt" = "microsoft" ]; then
         log "Detected Microsoft Hyper-V. Installing virtualization tools..."
-    apt_retry sudo NEEDRESTART_MODE=a apt-get -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
-elif [ "$virt" = "kvmq" ]; then
+        apt_retry sudo NEEDRESTART_MODE=a apt-get -y install linux-virtual linux-cloud-tools-virtual linux-tools-virtual
+    elif [ "$virt" = "kvmq" ]; then
         log "Detected KVM/QEMU. Installing virtualization tools..."
         apt_retry sudo NEEDRESTART_MODE=a apt-get -y install qemu-guest-agent
-    sudo systemctl enable qemu-guest-agent
-else
+        sudo systemctl enable qemu-guest-agent
+    else
         log "No specific virtualization tools required for $virt."
-fi
+    fi
 }
 
 install_glances() {
     log "Installing Glances for system monitoring..."
-sleep $SHORT_DELAY
+    sleep $SHORT_DELAY
     sudo snap install glances || error "Failed to install Glances."
 }
 
@@ -177,7 +185,7 @@ setup_autofs() {
     log "Setting up AUTOFS for NFS mounts..."
     sleep $SHORT_DELAY
     apt_retry sudo NEEDRESTART_MODE=a apt-get -y install autofs
-    
+
     # Copy autofs configuration files
     if [ -f "$(dirname "$0")/configs/etc/autofs/auto.master" ]; then
         sudo cp "$(dirname "$0")/configs/etc/autofs/auto.master" /etc/auto.master
@@ -188,7 +196,7 @@ setup_autofs() {
         warn "Autofs config files not found in configs/etc/autofs/. Skipping autofs setup."
         return
     fi
-    
+
     sudo systemctl restart autofs
 }
 
@@ -211,16 +219,16 @@ setup_samba() {
 
     # Retrieve or generate unique Samba password for this host from 1Password
     SAMBA_ITEM="samba-$(hostname)"
-    if command -v op &> /dev/null; then
+    if command -v op &>/dev/null; then
         if op item get "$SAMBA_ITEM" --vault=Private --fields label=password &>/dev/null; then
             SAMBA_PASSWORD=$(op read "op://Private/$SAMBA_ITEM/password")
             log "Samba password for $SAMBA_ITEM retrieved from 1Password."
         else
             op item create --category=login --vault=Private --title="$SAMBA_ITEM" \
-						"username=greg" \
-						--generate-password \
-						--tags "samba,homelab" \
-						> /dev/null
+                "username=greg" \
+                --generate-password \
+                --tags "samba,homelab" \
+                >/dev/null
             SAMBA_PASSWORD=$(op read "op://Private/$SAMBA_ITEM/password")
             log "Generated and stored new Samba password for $SAMBA_ITEM in 1Password."
         fi
@@ -274,19 +282,19 @@ setup_samba() {
 
 setup_github_ssh_key_from_server() {
     log "Fetching GitHub SSH key from 1Password CLI..."
-    if command -v op &> /dev/null; then
+    if command -v op &>/dev/null; then
         # Fetch private key
         mkdir -p ~/.ssh
         # Prefer a named field for private key; fall back to legacy path
         if op read "op://Private/id_ed25519_github/private key" &>/dev/null; then
-            op read "op://Private/id_ed25519_github/private key" > ~/.ssh/github
+            op read "op://Private/id_ed25519_github/private key" >~/.ssh/github
         else
-            op read "op://Private/id_ed25519_homelab/private key" > ~/.ssh/github
+            op read "op://Private/id_ed25519_homelab/private key" >~/.ssh/github
         fi
 
         chmod 600 ~/.ssh/github
         # Derive public key from private key to avoid mismatches
-        if ssh-keygen -y -f ~/.ssh/github > ~/.ssh/github.pub 2>/dev/null; then
+        if ssh-keygen -y -f ~/.ssh/github >~/.ssh/github.pub 2>/dev/null; then
             chmod 644 ~/.ssh/github.pub
             log "GitHub SSH private key fetched and public key derived successfully."
         else
@@ -299,14 +307,14 @@ setup_github_ssh_key_from_server() {
 
 setup_ssh_github() {
     log "Setting up SSH for GitHub..."
-sleep $SHORT_DELAY
+    sleep $SHORT_DELAY
 
     # Create .ssh directory if it doesn't exist
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
-    
+
     # Import GitHub SSH keys
-    if command -v curl &> /dev/null; then
+    if command -v curl &>/dev/null; then
         log "Importing SSH keys from GitHub for Sub-lime-time..."
         curl -fsSL "https://github.com/Sub-lime-time.keys" | tee -a ~/.ssh/authorized_keys
         chmod 600 ~/.ssh/authorized_keys
@@ -314,14 +322,14 @@ sleep $SHORT_DELAY
     else
         warn "curl not available. Skipping GitHub key import."
     fi
-    
+
     # Copy any additional SSH config from local configs
     if [ -d "$(dirname "$0")/configs/ssh" ]; then
         cp -r "$(dirname "$0")/configs/ssh/"* ~/.ssh/
-    chmod 600 ~/.ssh/*
-else
+        chmod 600 ~/.ssh/*
+    else
         warn "SSH config directory not found. Skipping..."
-fi
+    fi
 
     # In your script, check if the file exists before copying
     if [ -f "$(dirname "$0")/configs/ssh/github" ]; then
@@ -350,7 +358,7 @@ check_nfs_share() {
 setup_rsyslog() {
     log "Setup rsyslog"
     sleep $SHORT_DELAY
-    
+
     if [ -d "$(dirname "$0")/configs/etc/rsyslog.d" ]; then
         sudo cp "$(dirname "$0")/configs/etc/rsyslog.d/"* /etc/rsyslog.d/
         sudo chmod 644 /etc/rsyslog.d/*
@@ -364,7 +372,7 @@ setup_rsyslog() {
 setup_cron() {
     log "Populating CRON"
     sleep $LONG_DELAY
-    
+
     # Check if sync-distributed.sh exists before executing
     if [ -f "/mnt/linux/scripts/sync-distributed.sh" ]; then
         sudo bash -c "/mnt/linux/scripts/sync-distributed.sh"
@@ -372,7 +380,7 @@ setup_cron() {
     else
         warn "sync-distributed.sh not found at /mnt/linux/scripts/. Skipping sync setup."
     fi
-    
+
     if [ -d "$(dirname "$0")/configs/cron" ]; then
         sudo cp -v "$(dirname "$0")/configs/cron/"* /etc/cron.d/
         sudo chmod 644 /etc/cron.d/*
@@ -390,11 +398,28 @@ setup_cron() {
 
 setup_certs() {
     log "Certificate Setup"
-    sleep $LONG_DELAY
-    
-    if [ -f "/mnt/linux/scripts/manage-certs.sh" ]; then
-        source "/mnt/linux/scripts/manage-certs.sh"
-        log "Certificate management script executed successfully."
+    sleep "$LONG_DELAY"
+
+    local script="/mnt/linux/scripts/manage-certs.sh"
+
+    if [ -f "$script" ]; then
+        if [ ! -x "$script" ]; then
+            sudo chmod +x "$script" || {
+                warn "Could not chmod +x $script"
+                return 1
+            }
+        fi
+
+        # Run it as root, preserve environment only if you truly need it
+        sudo -E bash "$script"
+        local rc=$?
+
+        if [ $rc -eq 0 ]; then
+            log "Certificate management script executed successfully."
+        else
+            warn "manage-certs.sh failed with exit code $rc"
+            return $rc
+        fi
     else
         warn "manage-certs.sh not found at /mnt/linux/scripts/. Skipping certificate setup."
     fi
@@ -403,7 +428,7 @@ setup_certs() {
 setup_postfix() {
     log "Setting up Postfix..."
     sleep $SHORT_DELAY
-    
+
     if [ -f "$(dirname "$0")/scripts/setup-postfix.sh" ]; then
         source "$(dirname "$0")/scripts/setup-postfix.sh"
         log "Postfix setup script executed successfully."
@@ -414,7 +439,7 @@ setup_postfix() {
 
 setup_zsh() {
     log "Setup ZSH"
-sleep $SHORT_DELAY
+    sleep $SHORT_DELAY
     # Run the zsh setup script as the original invoking user when this
     # master installer is run with sudo. Sourcing as root hides the
     # real user's HOME and SSH agent, causing auth and logging issues.
@@ -429,7 +454,7 @@ sleep $SHORT_DELAY
         if command -v pgrep >/dev/null 2>&1; then
             for pid in $(pgrep -u "$SUDO_USER" -x ssh-agent 2>/dev/null || true); do
                 if [ -r "/proc/$pid/environ" ]; then
-                    sock=$(tr '\0' '\n' < /proc/$pid/environ | grep '^SSH_AUTH_SOCK=' | cut -d= -f2- || true)
+                    sock=$(tr '\0' '\n' </proc/$pid/environ | grep '^SSH_AUTH_SOCK=' | cut -d= -f2- || true)
                     if [ -n "$sock" ] && [ -S "$sock" ]; then
                         USER_SSH_AUTH_SOCK="$sock"
                         break
@@ -452,24 +477,24 @@ sleep $SHORT_DELAY
 }
 
 reboot_prompt() {
-read -r -p "Setup complete. Reboot now? [Y/n] " input
-input=${input:-Y}
-case $input in
-    [yY][eE][sS]|[yY])
-            log "Rebooting system..."
+    read -r -p "Setup complete. Reboot now? [Y/n] " input
+    input=${input:-Y}
+    case $input in
+    [yY][eE][sS] | [yY])
+        log "Rebooting system..."
         sudo reboot
         ;;
-    [nN][oO]|[nN])
-            log "Reboot skipped. Please reboot manually to apply changes."
+    [nN][oO] | [nN])
+        log "Reboot skipped. Please reboot manually to apply changes."
         ;;
     *)
-            warn "Invalid input. Reboot skipped."
+        warn "Invalid input. Reboot skipped."
         ;;
-esac
+    esac
 }
 
 wait_for_1password_account_add() {
-    if command -v op &> /dev/null; then
+    if command -v op &>/dev/null; then
         echo ""
         echo "────────────────────────────────────────────────────────────"
         echo "🔑  1Password Setup: Use your Keyboard Maestro hotkeys!"
@@ -498,11 +523,11 @@ wait_for_1password_account_add() {
 }
 
 wait_for_1password_signin() {
-    if command -v op &> /dev/null; then
+    if command -v op &>/dev/null; then
         log "Signing in to 1Password CLI to enable secret access."
         eval "$(op signin)"
         # Check if sign-in was successful
-        if op account get &> /dev/null; then
+        if op account get &>/dev/null; then
             log "1Password CLI sign-in successful. Continuing setup."
         else
             error "1Password CLI sign-in failed. Please check your credentials and try again."
@@ -535,4 +560,3 @@ main() {
 }
 
 main "$@"
-
